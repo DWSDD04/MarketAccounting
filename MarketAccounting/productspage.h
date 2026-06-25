@@ -10,7 +10,6 @@
 
 class StyledLineEdit;
 class StyledComboBox;
-class CardWidget;
 struct Product;
 
 class ProductsPage : public QWidget
@@ -28,6 +27,8 @@ private slots:
     void onSearchTextChanged(const QString& text);
     void onTableClicked(const QModelIndex& index);
     void onCategoryFilterChanged(int index);
+    void onPrintClicked();
+    void onExportClicked();
 
 private:
     void setupUI();

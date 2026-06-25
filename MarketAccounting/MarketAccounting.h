@@ -16,8 +16,6 @@ public:
     ~MarketAccounting();
 
 private:
-    void setupNavigation();
-
     Ui::MarketAccountingClass* ui;
 };
 

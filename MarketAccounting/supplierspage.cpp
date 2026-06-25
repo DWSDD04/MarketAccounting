@@ -1,7 +1,6 @@
 #include "supplierspage.h"
 #include "styledlineedit.h"
 #include "styledcombobox.h"
-#include "cardwidget.h"
 #include "supplier.h"
 #include "dbmanager.h"
 
@@ -13,8 +12,9 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QSqlQuery>
-#include <QDebug>
-#include <QLineEdit>
+#include <QGroupBox>
+#include <QFileDialog>
+#include <QTextStream>
 
 SuppliersPage::SuppliersPage(QWidget* parent) : QWidget(parent), m_currentId(-1) {
     setupUI();
@@ -25,123 +25,175 @@ SuppliersPage::SuppliersPage(QWidget* parent) : QWidget(parent), m_currentId(-1)
 SuppliersPage::~SuppliersPage() {}
 
 void SuppliersPage::setupUI() {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(30, 30, 30, 30);
-    setStyleSheet("background-color: #F8F9FA;");
+    QHBoxLayout* mainLayout = new QHBoxLayout(this);
+    mainLayout->setSpacing(15);
+    mainLayout->setContentsMargins(15, 15, 15, 15);
 
-    QLabel* title = new QLabel(tr("Supplier Management"));
-    title->setStyleSheet(
-        "font-size: 24px; font-weight: bold; color: #1a1a2e; "
-        "padding-bottom: 10px; border-bottom: 3px solid #16213e;"
+    // ========= LEFT SIDE: Form =========
+    QGroupBox* formBox = new QGroupBox(tr("معلومات المورد"), this);
+    formBox->setStyleSheet(
+        "QGroupBox { "
+        "  background-color: #E8F0F8; "
+        "  border: 1px solid #9DB9D2; "
+        "  border-radius: 4px; "
+        "  margin-top: 12px; "
+        "  font-weight: bold; "
+        "  color: #1a3a5c; "
+        "}"
+        "QGroupBox::title { "
+        "  subcontrol-origin: margin; "
+        "  left: 10px; "
+        "  padding: 0 5px; "
+        "}"
     );
-    mainLayout->addWidget(title);
-
-    CardWidget* formCard = new CardWidget(this);
-    QGridLayout* formLayout = new QGridLayout(formCard);
-    formLayout->setSpacing(15);
-    formLayout->setContentsMargins(25, 25, 25, 25);
+    QGridLayout* formLayout = new QGridLayout(formBox);
+    formLayout->setSpacing(10);
+    formLayout->setContentsMargins(20, 20, 20, 20);
 
     auto addLabel = [&](const QString& text, int row, int col) {
         QLabel* lbl = new QLabel(text);
-        lbl->setStyleSheet("font-weight: 600; color: #495057; font-size: 13px;");
-        formLayout->addWidget(lbl, row, col, Qt::AlignRight | Qt::AlignVCenter);
+        lbl->setStyleSheet("color: #1a3a5c; font-size: 13px; font-weight: 600;");
+        lbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        formLayout->addWidget(lbl, row, col);
         };
 
-    // Row 0: Name | Address
+    // Row 0: Name | Client
     m_nameEdit = new StyledLineEdit(this);
     m_nameEdit->setPlaceholderText(tr("Supplier Name"));
-    addLabel(tr("Name:"), 0, 2);
+    addLabel(tr("الاسم :"), 0, 2);
     formLayout->addWidget(m_nameEdit, 0, 1);
 
-    m_addressEdit = new StyledLineEdit(this);
-    m_addressEdit->setPlaceholderText(tr("Address"));
-    addLabel(tr("Address:"), 0, 0);
-    formLayout->addWidget(m_addressEdit, 0, 3);
-
-    // Row 1: Phone | Fax
     m_phoneEdit = new StyledLineEdit(this);
     m_phoneEdit->setPlaceholderText("76505103");
-    addLabel(tr("Phone:"), 1, 2);
-    formLayout->addWidget(m_phoneEdit, 1, 1);
+    addLabel(tr("العميل :"), 0, 0);
+    formLayout->addWidget(m_phoneEdit, 0, 3);
 
-    m_faxEdit = new StyledLineEdit(this);
-    addLabel(tr("Fax:"), 1, 0);
-    formLayout->addWidget(m_faxEdit, 1, 3);
+    // Row 1: Financial Number
+    m_addressEdit = new StyledLineEdit(this);
+    m_addressEdit->setPlaceholderText(tr("Financial Number"));
+    addLabel(tr("الرقم المالي :"), 1, 2);
+    formLayout->addWidget(m_addressEdit, 1, 1, 1, 3);
 
-    // Row 2: Account | VAT
+    // Row 2: Address (wide)
+    m_notesEdit = new StyledLineEdit(this);
+    m_notesEdit->setPlaceholderText(tr("Address"));
+    addLabel(tr("العنوان :"), 2, 2);
+    formLayout->addWidget(m_notesEdit, 2, 1, 1, 3);
+
+    // Row 3: Account Basis | VAT
     m_accountEdit = new StyledLineEdit(this);
-    m_accountEdit->setPlaceholderText("40110146-02");
-    addLabel(tr("Account #:"), 2, 2);
-    formLayout->addWidget(m_accountEdit, 2, 1);
+    m_accountEdit->setPlaceholderText("4011");
+    addLabel(tr("اساس رقم الحساب :"), 3, 2);
+    formLayout->addWidget(m_accountEdit, 3, 1);
 
     m_vatEdit = new StyledLineEdit(this);
     m_vatEdit->setPlaceholderText("442100207");
-    addLabel(tr("VAT #:"), 2, 0);
-    formLayout->addWidget(m_vatEdit, 2, 3);
+    addLabel(tr("VAT رقم حساب :"), 3, 0);
+    formLayout->addWidget(m_vatEdit, 3, 3);
 
-    // Row 3: Currency | Credit Limit
+    // Row 4: Account Number | Currency
+    m_faxEdit = new StyledLineEdit(this);
+    m_faxEdit->setPlaceholderText("40110146-02");
+    addLabel(tr("رقم الحساب :"), 4, 2);
+    formLayout->addWidget(m_faxEdit, 4, 1);
+
     m_currencyCombo = new StyledComboBox(this);
-    m_currencyCombo->addItems({ "USD", "EUR", "SAR", "AED", "IQD", "EGP" });
-    addLabel(tr("Currency:"), 3, 2);
-    formLayout->addWidget(m_currencyCombo, 3, 1);
+    m_currencyCombo->addItems({ "دولار أميركي", "يورو", "ليرة لبنانية", "درهم إماراتي" });
+    addLabel(tr("عملة المورد :"), 4, 0);
+    formLayout->addWidget(m_currencyCombo, 4, 3);
+
+    // Row 5: Region | Debt Ceiling
+    m_groupCombo = new StyledComboBox(this);
+    addLabel(tr("المنطقة :"), 5, 2);
+    formLayout->addWidget(m_groupCombo, 5, 1);
 
     m_creditLimitEdit = new StyledLineEdit(this);
     m_creditLimitEdit->setPlaceholderText("0.00");
-    addLabel(tr("Credit Limit:"), 3, 0);
-    formLayout->addWidget(m_creditLimitEdit, 3, 3);
+    addLabel(tr("سقف الدين :"), 5, 0);
+    formLayout->addWidget(m_creditLimitEdit, 5, 3);
 
-    // Row 4: Group
-    m_groupCombo = new StyledComboBox(this);
-    addLabel(tr("Group:"), 4, 2);
-    formLayout->addWidget(m_groupCombo, 4, 1);
+    // Row 6: Category | Customer (visual only)
+    StyledLineEdit* categoryEdit = new StyledLineEdit(this);
+    categoryEdit->setPlaceholderText("1");
+    addLabel(tr("الفئة :"), 6, 2);
+    formLayout->addWidget(categoryEdit, 6, 1);
 
-    // Row 5: Notes
-    m_notesEdit = new StyledLineEdit(this);
-    m_notesEdit->setPlaceholderText(tr("Notes..."));
-    addLabel(tr("Notes:"), 5, 2);
-    formLayout->addWidget(m_notesEdit, 5, 1, 1, 3);
+    StyledComboBox* customerCombo = new StyledComboBox(this);
+    addLabel(tr("الزبون :"), 6, 0);
+    formLayout->addWidget(customerCombo, 6, 3);
 
     // Buttons
     QHBoxLayout* btnLayout = new QHBoxLayout();
-    btnLayout->setSpacing(12);
-
-    m_newBtn = new QPushButton(tr("New"));
-    m_newBtn->setStyleSheet("QPushButton { background-color: #6c757d; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; }"
-        "QPushButton:hover { background-color: #5a6268; }");
-
-    m_saveBtn = new QPushButton(tr("Save"));
-    m_saveBtn->setStyleSheet("QPushButton { background-color: #16213e; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; }"
-        "QPushButton:hover { background-color: #0f3460; }");
-
-    m_clearBtn = new QPushButton(tr("Cancel"));
-    m_clearBtn->setStyleSheet("QPushButton { background-color: #e9ecef; color: #495057; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: 1px solid #dee2e6; }"
-        "QPushButton:hover { background-color: #dee2e6; }");
-
-    m_deleteBtn = new QPushButton(tr("Delete"));
-    m_deleteBtn->setStyleSheet("QPushButton { background-color: #dc3545; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 600; border: none; }"
-        "QPushButton:hover { background-color: #c82333; }");
-
     btnLayout->addStretch();
+
+    QString btnStyle =
+        "QPushButton { "
+        "  background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+        "    stop:0 #F0F5FA, stop:1 #D6E6F0); "
+        "  border: 1px solid #9DB9D2; "
+        "  border-radius: 3px; "
+        "  padding: 8px 24px; "
+        "  color: #1a3a5c; "
+        "  font-weight: 600; "
+        "}"
+        "QPushButton:hover { background-color: #C8DDE8; }"
+        "QPushButton:pressed { background-color: #B8D4E8; }";
+
+    m_newBtn = new QPushButton(tr("جديد"));
+    m_newBtn->setStyleSheet(btnStyle);
+
+    m_saveBtn = new QPushButton(tr("حفظ"));
+    m_saveBtn->setStyleSheet(btnStyle);
+
+    m_clearBtn = new QPushButton(tr("الغاء"));
+    m_clearBtn->setStyleSheet(btnStyle);
+
+    m_deleteBtn = new QPushButton(tr("حذف"));
+    m_deleteBtn->setStyleSheet(
+        "QPushButton { "
+        "  background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+        "    stop:0 #F0F5FA, stop:1 #D6E6F0); "
+        "  border: 1px solid #9DB9D2; "
+        "  border-radius: 3px; "
+        "  padding: 8px 24px; "
+        "  color: #dc3545; "
+        "  font-weight: 600; "
+        "}"
+        "QPushButton:hover { background-color: #C8DDE8; }"
+    );
+
     btnLayout->addWidget(m_newBtn);
     btnLayout->addWidget(m_saveBtn);
     btnLayout->addWidget(m_clearBtn);
     btnLayout->addWidget(m_deleteBtn);
-    formLayout->addLayout(btnLayout, 6, 0, 1, 4);
+    btnLayout->addStretch();
 
-    mainLayout->addWidget(formCard);
+    formLayout->addLayout(btnLayout, 7, 0, 1, 4);
 
-    // Table Card
-    CardWidget* tableCard = new CardWidget(this);
-    QVBoxLayout* tableLayout = new QVBoxLayout(tableCard);
+    mainLayout->addWidget(formBox, 1);
 
-    QLabel* tableTitle = new QLabel(tr("Suppliers List"));
-    tableTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #1a1a2e;");
-    tableLayout->addWidget(tableTitle);
+    // ========= RIGHT SIDE: Table + Print/Export =========
+    QGroupBox* tableBox = new QGroupBox(tr("قائمة الموردين"), this);
+    tableBox->setStyleSheet(formBox->styleSheet());
+    QVBoxLayout* tableLayout = new QVBoxLayout(tableBox);
+
+    // Search + Print/Export row
+    QHBoxLayout* topBarLayout = new QHBoxLayout();
 
     StyledLineEdit* searchEdit = new StyledLineEdit(this);
-    searchEdit->setPlaceholderText(tr("Search supplier..."));
-    tableLayout->addWidget(searchEdit);
+    searchEdit->setPlaceholderText(tr("بحث..."));
+    topBarLayout->addWidget(searchEdit, 1);
+
+    QPushButton* printBtn = new QPushButton(tr("طباعة"));
+    printBtn->setStyleSheet(btnStyle);
+
+    QPushButton* exportBtn = new QPushButton(tr("تصدير CSV"));
+    exportBtn->setStyleSheet(btnStyle);
+
+    topBarLayout->addWidget(printBtn);
+    topBarLayout->addWidget(exportBtn);
+
+    tableLayout->addLayout(topBarLayout);
 
     m_tableView = new QTableView(this);
     m_tableModel = new QStandardItemModel(this);
@@ -152,9 +204,24 @@ void SuppliersPage::setupUI() {
 
     m_tableView->setModel(m_tableModel);
     m_tableView->setStyleSheet(
-        "QTableView { background-color: white; border: 1px solid #e9ecef; border-radius: 8px; gridline-color: #f1f3f5; selection-background-color: #16213e; selection-color: white; }"
-        "QHeaderView::section { background-color: #f8f9fa; padding: 10px; border: none; border-bottom: 2px solid #16213e; font-weight: 600; color: #1a1a2e; }"
-        "QTableView::item { padding: 8px; }"
+        "QTableView { "
+        "  background-color: #FFFFFF; "
+        "  border: 1px solid #9DB9D2; "
+        "  gridline-color: #D6E6F0; "
+        "  selection-background-color: #B8D4E8; "
+        "  selection-color: #000000; "
+        "}"
+        "QHeaderView::section { "
+        "  background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+        "    stop:0 #F0F5FA, stop:1 #D6E6F0); "
+        "  padding: 8px; "
+        "  border: 1px solid #9DB9D2; "
+        "  border-left: none; "
+        "  font-weight: 600; "
+        "  color: #1a3a5c; "
+        "}"
+        "QTableView::item { padding: 6px; }"
+        "QTableView::item:alternate { background-color: #F5F9FC; }"
     );
     m_tableView->horizontalHeader()->setStretchLastSection(true);
     m_tableView->setAlternatingRowColors(true);
@@ -162,7 +229,7 @@ void SuppliersPage::setupUI() {
     m_tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     tableLayout->addWidget(m_tableView);
-    mainLayout->addWidget(tableCard, 1);
+    mainLayout->addWidget(tableBox, 1);
 
     // Connections
     connect(m_saveBtn, &QPushButton::clicked, this, &SuppliersPage::onSaveClicked);
@@ -171,6 +238,8 @@ void SuppliersPage::setupUI() {
     connect(m_deleteBtn, &QPushButton::clicked, this, &SuppliersPage::onDeleteClicked);
     connect(searchEdit, &QLineEdit::textChanged, this, &SuppliersPage::onSearchTextChanged);
     connect(m_tableView, &QTableView::clicked, this, &SuppliersPage::onTableClicked);
+    connect(printBtn, &QPushButton::clicked, this, &SuppliersPage::onPrintClicked);
+    connect(exportBtn, &QPushButton::clicked, this, &SuppliersPage::onExportClicked);
 }
 
 void SuppliersPage::loadGroups() {
@@ -323,6 +392,44 @@ void SuppliersPage::onTableClicked(const QModelIndex& index) {
         populateForm(s);
         m_currentId = id;
     }
+}
+
+void SuppliersPage::onPrintClicked() {
+    QMessageBox::information(this, tr("Print"), tr("Print functionality requires Qt PrintSupport module.\nPlease add 'printsupport' to Qt Modules in project settings."));
+}
+
+void SuppliersPage::onExportClicked() {
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export CSV"), "suppliers.csv", tr("CSV Files (*.csv)"));
+    if (fileName.isEmpty()) return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, tr("Error"), tr("Could not open file for writing"));
+        return;
+    }
+
+    QTextStream stream(&file);
+
+    // UTF-8 BOM for Excel (Qt 6 compatible)
+    stream << QString("\uFEFF");
+
+    stream << "\"" << tr("Name") << "\","
+        << "\"" << tr("Phone") << "\","
+        << "\"" << tr("Account") << "\","
+        << "\"" << tr("Currency") << "\","
+        << "\"" << tr("Credit") << "\","
+        << "\"" << tr("Status") << "\"\n";
+
+    for (int r = 0; r < m_tableModel->rowCount(); ++r) {
+        for (int c = 1; c <= 6; ++c) {
+            stream << "\"" << m_tableModel->item(r, c)->text() << "\"";
+            if (c < 6) stream << ",";
+        }
+        stream << "\n";
+    }
+
+    file.close();
+    QMessageBox::information(this, tr("Success"), tr("Exported successfully to ") + fileName);
 }
 
 void SuppliersPage::clearForm() {

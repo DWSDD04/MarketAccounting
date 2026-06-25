@@ -1,14 +1,11 @@
 #include "MarketAccounting.h"
 #include "ui_MarketAccounting.h"
-
 #include "supplierspage.h"
 #include "productspage.h"
 #include "debtspage.h"
 #include "dashboardpage.h"
-#include "salespage.h"
 
-#include <QStackedWidget>
-#include <QPushButton>
+#include <QTabWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -22,110 +19,66 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     setWindowTitle(tr("Market Accounting System"));
     resize(1400, 900);
 
+    // Central widget with light blue Windows-style background
     QWidget* central = new QWidget(this);
-    QHBoxLayout* mainLayout = new QHBoxLayout(central);
-    mainLayout->setSpacing(0);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
+    central->setStyleSheet("background-color: #E8F0F8;");
+    QVBoxLayout* mainLayout = new QVBoxLayout(central);
+    mainLayout->setSpacing(8);
+    mainLayout->setContentsMargins(12, 12, 12, 12);
 
-    QWidget* sidebar = new QWidget(central);
-    sidebar->setFixedWidth(260);
-    sidebar->setStyleSheet("background-color: #1a1a2e;");
-
-    QVBoxLayout* sidebarLayout = new QVBoxLayout(sidebar);
-    sidebarLayout->setSpacing(8);
-    sidebarLayout->setContentsMargins(15, 30, 15, 20);
-
-    QLabel* logo = new QLabel("MarketPro");
-    logo->setStyleSheet(
-        "color: white; font-size: 22px; font-weight: bold; "
-        "padding-bottom: 20px; border-bottom: 1px solid #2d2d44;"
+    // Top header bar
+    QWidget* header = new QWidget(central);
+    header->setFixedHeight(50);
+    header->setStyleSheet(
+        "background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+        "stop:0 #D6E6F0, stop:1 #B8D4E8);"
+        "border: 1px solid #9DB9D2;"
+        "border-radius: 4px;"
     );
-    sidebarLayout->addWidget(logo);
+    QHBoxLayout* headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(15, 0, 15, 0);
+    QLabel* title = new QLabel("Market Accounting System");
+    title->setStyleSheet("font-size: 16px; font-weight: bold; color: #1a3a5c;");
+    headerLayout->addWidget(title);
+    mainLayout->addWidget(header);
 
-    auto createNavBtn = [&](const QString& text) -> QPushButton* {
-        QPushButton* btn = new QPushButton(text);
-        btn->setStyleSheet(
-            "QPushButton {"
-            "  color: #a0a0b8; background: transparent; border: none;"
-            "  padding: 14px 18px; text-align: left; font-size: 14px;"
-            "  border-radius: 10px; margin: 2px 0;"
-            "}"
-            "QPushButton:hover { background-color: #16213e; color: white; }"
-            "QPushButton:checked { background-color: #0f3460; color: white; font-weight: 600; }"
-        );
-        btn->setCheckable(true);
-        btn->setCursor(Qt::PointingHandCursor);
-        btn->setMinimumHeight(48);
-        return btn;
-        };
-
-    QPushButton* dashBtn = createNavBtn(tr("Dashboard"));
-    QPushButton* salesBtn = createNavBtn(tr("Sales"));
-    QPushButton* suppBtn = createNavBtn(tr("Suppliers"));
-    QPushButton* prodBtn = createNavBtn(tr("Products"));
-    QPushButton* debtBtn = createNavBtn(tr("Accounting"));
-
-    dashBtn->setChecked(true);
-
-    sidebarLayout->addWidget(dashBtn);
-    sidebarLayout->addWidget(salesBtn);
-    sidebarLayout->addWidget(suppBtn);
-    sidebarLayout->addWidget(prodBtn);
-    sidebarLayout->addWidget(debtBtn);
-    sidebarLayout->addStretch();
-
-    mainLayout->addWidget(sidebar);
-
-    QStackedWidget* stack = new QStackedWidget(central);
+    // Tab widget — matches the tabs in your images
+    QTabWidget* tabWidget = new QTabWidget(central);
+    tabWidget->setStyleSheet(
+        "QTabWidget::pane { "
+        "  border: 1px solid #9DB9D2; "
+        "  background-color: #E8F0F8; "
+        "  border-top: none; "
+        "}"
+        "QTabBar::tab { "
+        "  background-color: #D6E6F0; "
+        "  border: 1px solid #9DB9D2; "
+        "  padding: 8px 24px; "
+        "  margin-right: 3px; "
+        "  border-top-left-radius: 4px; "
+        "  border-top-right-radius: 4px; "
+        "  color: #1a3a5c; "
+        "}"
+        "QTabBar::tab:selected { "
+        "  background-color: #E8F0F8; "
+        "  border-bottom: 1px solid #E8F0F8; "
+        "  font-weight: bold; "
+        "}"
+        "QTabBar::tab:hover { background-color: #C8DDE8; }"
+    );
 
     DashboardPage* dashPage = new DashboardPage();
-    SalesPage* salesPage = new SalesPage();
     SuppliersPage* suppPage = new SuppliersPage();
     ProductsPage* prodPage = new ProductsPage();
     DebtsPage* debtPage = new DebtsPage();
 
-    stack->addWidget(dashPage);
-    stack->addWidget(salesPage);
-    stack->addWidget(suppPage);
-    stack->addWidget(prodPage);
-    stack->addWidget(debtPage);
+    tabWidget->addTab(dashPage, tr("المعلومات الرئيسية"));
+    tabWidget->addTab(suppPage, tr("الحسابات"));
+    tabWidget->addTab(prodPage, tr("المنتوجين"));
+    tabWidget->addTab(debtPage, tr("الرصيد"));
 
-    mainLayout->addWidget(stack, 1);
+    mainLayout->addWidget(tabWidget, 1);
     setCentralWidget(central);
-
-    auto uncheckAll = [=]() {
-        dashBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        debtBtn->setChecked(false);
-        };
-
-    connect(dashBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(0);
-        uncheckAll();
-        dashBtn->setChecked(true);
-        });
-    connect(salesBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(1);
-        uncheckAll();
-        salesBtn->setChecked(true);
-        });
-    connect(suppBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(2);
-        uncheckAll();
-        suppBtn->setChecked(true);
-        });
-    connect(prodBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(3);
-        uncheckAll();
-        prodBtn->setChecked(true);
-        });
-    connect(debtBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(4);
-        uncheckAll();
-        debtBtn->setChecked(true);
-        });
 }
 
 MarketAccounting::~MarketAccounting()

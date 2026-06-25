@@ -27,6 +27,8 @@ private slots:
     void onTableClicked(const QModelIndex& index);
     void onDeleteClicked();
     void onNewClicked();
+    void onPrintClicked();     
+    void onExportClicked();
 
 private:
     void setupUI();
