@@ -5,6 +5,7 @@
 #include "productspage.h"
 #include "debtspage.h"
 #include "dashboardpage.h"
+#include "salespage.h"
 
 #include <QStackedWidget>
 #include <QPushButton>
@@ -59,6 +60,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         };
 
     QPushButton* dashBtn = createNavBtn(tr("Dashboard"));
+    QPushButton* salesBtn = createNavBtn(tr("Sales"));
     QPushButton* suppBtn = createNavBtn(tr("Suppliers"));
     QPushButton* prodBtn = createNavBtn(tr("Products"));
     QPushButton* debtBtn = createNavBtn(tr("Accounting"));
@@ -66,6 +68,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     dashBtn->setChecked(true);
 
     sidebarLayout->addWidget(dashBtn);
+    sidebarLayout->addWidget(salesBtn);
     sidebarLayout->addWidget(suppBtn);
     sidebarLayout->addWidget(prodBtn);
     sidebarLayout->addWidget(debtBtn);
@@ -76,11 +79,13 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     QStackedWidget* stack = new QStackedWidget(central);
 
     DashboardPage* dashPage = new DashboardPage();
+    SalesPage* salesPage = new SalesPage();
     SuppliersPage* suppPage = new SuppliersPage();
     ProductsPage* prodPage = new ProductsPage();
     DebtsPage* debtPage = new DebtsPage();
 
     stack->addWidget(dashPage);
+    stack->addWidget(salesPage);
     stack->addWidget(suppPage);
     stack->addWidget(prodPage);
     stack->addWidget(debtPage);
@@ -88,33 +93,38 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     mainLayout->addWidget(stack, 1);
     setCentralWidget(central);
 
+    auto uncheckAll = [=]() {
+        dashBtn->setChecked(false);
+        salesBtn->setChecked(false);
+        suppBtn->setChecked(false);
+        prodBtn->setChecked(false);
+        debtBtn->setChecked(false);
+        };
+
     connect(dashBtn, &QPushButton::clicked, [=]() {
         stack->setCurrentIndex(0);
+        uncheckAll();
         dashBtn->setChecked(true);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        debtBtn->setChecked(false);
+        });
+    connect(salesBtn, &QPushButton::clicked, [=]() {
+        stack->setCurrentIndex(1);
+        uncheckAll();
+        salesBtn->setChecked(true);
         });
     connect(suppBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(1);
+        stack->setCurrentIndex(2);
+        uncheckAll();
         suppBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        debtBtn->setChecked(false);
         });
     connect(prodBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(2);
+        stack->setCurrentIndex(3);
+        uncheckAll();
         prodBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        debtBtn->setChecked(false);
         });
     connect(debtBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(3);
+        stack->setCurrentIndex(4);
+        uncheckAll();
         debtBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
         });
 }
 

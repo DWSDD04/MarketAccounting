@@ -101,7 +101,8 @@
     <ClCompile Include="cardwidget.cpp" />
     <ClCompile Include="dashboardpage.cpp" />
     <ClCompile Include="debtspage.cpp" />
-    <ClCompile Include="productspage.cpp" />
+    <ClCompile Include="productpage.cpp" />
+    <ClCompile Include="salespage.cpp" />
     <ClCompile Include="styledcombobox.cpp" />
     <ClCompile Include="styledlineedit.cpp" />
     <ClCompile Include="supplierspage.cpp" />
@@ -122,6 +123,7 @@
     <QtMoc Include="productspage.h" />
     <QtMoc Include="styledcombobox.h" />
     <QtMoc Include="styledlineedit.h" />
+    <QtMoc Include="salespage.h" />
     <ClInclude Include="supplier.h" />
     <QtMoc Include="supplierspage.h" />
     <ClInclude Include="transaction.h" />

@@ -61,9 +61,6 @@
     <ClCompile Include="supplierspage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
-    <ClCompile Include="productspage.cpp">
-      <Filter>Widgets</Filter>
-    </ClCompile>
     <ClCompile Include="debtspage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
@@ -78,6 +75,12 @@
     </ClCompile>
     <ClCompile Include="cardwidget.cpp">
       <Filter>Widgets\Custom</Filter>
+    </ClCompile>
+    <ClCompile Include="salespage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="productpage.cpp">
+      <Filter>Widgets</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -118,6 +121,9 @@
     </QtMoc>
     <QtMoc Include="dbmanager.h">
       <Filter>Database</Filter>
+    </QtMoc>
+    <QtMoc Include="salespage.h">
+      <Filter>Widgets</Filter>
     </QtMoc>
   </ItemGroup>
 </Project>
