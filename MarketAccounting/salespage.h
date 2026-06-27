@@ -3,19 +3,17 @@
 #define SALESPAGE_H
 
 #include <QWidget>
-#include <QTableWidget>
+#include <QTableView>
 #include <QStandardItemModel>
 #include <QPushButton>
-#include <QComboBox>
 #include <QLabel>
-#include <QLineEdit>
-#include <QRadioButton>
+#include <QComboBox>
+#include <QSpinBox>
 #include <QButtonGroup>
-#include <QDialog>
-#include <QDoubleSpinBox>
-#include <QListWidget>
-#include <QGroupBox>
-#include <QStackedWidget>
+#include <QMap>
+#include <QVector>
+#include <QTabWidget>
+#include <QDateEdit>
 
 class StyledLineEdit;
 class StyledComboBox;
@@ -23,134 +21,115 @@ class CardWidget;
 
 struct SaleItem {
     int productId = -1;
-    QString productCode;
-    QString productName;
-    double quantity = 0.0;
-    double unitPrice = 0.0;
-    double sum = 0.0;
+    QString code;
+    QString name;
+    double price = 0.0;
+    int quantity = 1;
+    double lineTotal = 0.0;
 };
 
 struct SaleSession {
-    int saleCode = -1;
-    QList<SaleItem> items;
-    QString paymentType; // "cash" or "debt"
-    int accountId = -1;
+    int id = -1;
+    int code = 0;
+    QString paymentType = "cash";
+    int accountId = 0;
     QString accountName;
-    bool isSaved = false;
+    QVector<SaleItem> items;
+    double totalLBP = 0.0;
+    double totalUSD = 0.0;
 };
 
-class PriceEditDialog : public QDialog {
-    Q_OBJECT
-public:
-    explicit PriceEditDialog(int productId, const QString& productName, double currentPrice, QWidget* parent = nullptr);
-    double newPrice() const;
-
-private:
-    QDoubleSpinBox* m_priceSpin;
-    double m_newPrice = 0.0;
-};
-
-class SalesPage : public QWidget {
+class SalesPage : public QWidget
+{
     Q_OBJECT
 public:
     explicit SalesPage(QWidget* parent = nullptr);
     ~SalesPage();
 
 private slots:
-    void onProductTypeClicked(QListWidgetItem* item);
+    void onCategoryClicked(int categoryId);
+    void onProductSelected(const QModelIndex& index);
     void onAddProductClicked();
-    void onDeleteRowClicked();
-    void onTableCellChanged(int row, int col);
-    void onTableItemSelectionChanged();
-    void onPaymentTypeChanged(QAbstractButton* btn);
+    void onDeleteItemClicked();
+    void onEditItemClicked();
+    void onPaymentTypeChanged(int index);
     void onAccountChanged(int index);
-    void onSearchProductChanged(const QString& text);
-    void onSearchTableChanged(const QString& text);
+    void onSaleSlotClicked(int slot);
     void onPrevSaleClicked();
     void onNextSaleClicked();
     void onEditByCodeClicked();
-    void onSaleSlotClicked(int slotIndex);
+    void onSearchTextChanged(const QString& text);
+    void onSaleTableClicked(const QModelIndex& index);
     void onChangePriceClicked();
-    void onSaveSaleClicked();
-    void onNewSaleClicked();
-    void onProductSearchSelected(const QModelIndex& index);
+    void calculateNet();
 
 private:
     void setupUI();
-    void loadProductTypes();
-    void loadProductsByType(int typeId);
+    void loadCategories();
     void loadAccounts();
-    void loadAllProducts();
-    void refreshProductListWidget();
-    void refreshTable();
-    void updateTotals();
-    void updateProductHistory(int productId);
-    void switchToSession(int index);
-    void generateSaleCode();
-    double getExchangeRate() const; // LBP per 1 USD
-    int getNextAvailableSaleCode();
+    void loadProductsByCategory(int categoryId);
+    void refreshSaleTable();
+    void refreshTotals();
+    void refreshProductHistory(int productId);
+    void switchToSlot(int slot);
+    void clearCurrentSale();
+    void loadSaleFromSession(int slot);
+    int generateSaleCode();
+    void updateSlotButtons();
+    void enforcePaymentRules();
 
-    // Sessions
-    QList<SaleSession> m_sessions;
-    int m_currentSessionIndex = 0;
+    // Tab builders
+    void buildSaleInfoTab(QTabWidget* tabs);
+    void buildItemsTab(QTabWidget* tabs);
+    void buildAccountsTab(QTabWidget* tabs);
+
+    QVector<SaleSession> m_sessions;
+    int m_currentSlot = 0;
     int m_nextSaleCode = 1000;
+    QMap<int, QString> m_categories;
 
-    // UI Components
-    // Top: Sale slots
-    QPushButton* m_slotBtns[3];
-    QLabel* m_slotLabels[3];
+    QButtonGroup* m_slotButtons = nullptr;
+    QPushButton* m_slot1Btn = nullptr;
+    QPushButton* m_slot2Btn = nullptr;
+    QPushButton* m_slot3Btn = nullptr;
 
-    // Navigation
-    QPushButton* m_prevBtn;
-    QPushButton* m_nextBtn;
-    QPushButton* m_editCodeBtn;
-    StyledLineEdit* m_codeEdit;
+    QLabel* m_saleCodeLabel = nullptr;
+    StyledComboBox* m_paymentCombo = nullptr;
+    StyledComboBox* m_accountCombo = nullptr;
+    StyledLineEdit* m_searchEdit = nullptr;
 
-    // Payment & Account
-    QButtonGroup* m_paymentGroup;
-    QRadioButton* m_cashRadio;
-    QRadioButton* m_debtRadio;
-    StyledComboBox* m_accountCombo;
+    QPushButton* m_prevBtn = nullptr;
+    QPushButton* m_nextBtn = nullptr;
+    QPushButton* m_editCodeBtn = nullptr;
+    QPushButton* m_addBtn = nullptr;
+    QPushButton* m_deleteBtn = nullptr;
+    QPushButton* m_editBtn = nullptr;
+    QPushButton* m_changePriceBtn = nullptr;
 
-    // Product Type List
-    QListWidget* m_typeList;
-    int m_currentTypeId = -1;
+    QTableView* m_productTable = nullptr;
+    QStandardItemModel* m_productModel = nullptr;
 
-    // Product Search & List
-    StyledLineEdit* m_productSearch;
-    QListWidget* m_productList;
-    QList<QVariantMap> m_allProducts;
-    QList<QVariantMap> m_filteredProducts;
+    QTableView* m_saleTable = nullptr;
+    QStandardItemModel* m_saleModel = nullptr;
 
-    // Table
-    QTableWidget* m_table;
-    QStringList m_tableHeaders;
+    QLabel* m_totalLBPLabel = nullptr;
+    QLabel* m_totalUSDLabel = nullptr;
 
-    // Table Search
-    StyledLineEdit* m_tableSearch;
+    QLabel* m_histTotalSold = nullptr;
+    QLabel* m_histRemaining = nullptr;
+    QLabel* m_histAvgPrice = nullptr;
+    QLabel* m_histLastSale = nullptr;
 
-    // Totals
-    QLabel* m_totalLbpLabel;
-    QLabel* m_totalUsdLabel;
+    QSpinBox* m_quantitySpin = nullptr;
 
-    // Product History
-    QLabel* m_historyProductLabel;
-    QLabel* m_historyTotalSoldLabel;
-    QLabel* m_historyRemainingLabel;
-    QLabel* m_historyAvgPriceLabel;
-
-    // Buttons
-    QPushButton* m_addBtn;
-    QPushButton* m_deleteBtn;
-    QPushButton* m_changePriceBtn;
-    QPushButton* m_saveSaleBtn;
-    QPushButton* m_newSaleBtn;
-
-    // Currently selected product in table
-    int m_selectedProductId = -1;
-
-    // Exchange rate (LBP per USD) - can be fetched from DB or hardcoded
-    double m_exchangeRate = 89500.0;
+    // Microsoft-style form fields
+    StyledLineEdit* m_refEdit = nullptr;
+    QDateEdit* m_dateEdit = nullptr;
+    StyledComboBox* m_customerCombo = nullptr;
+    StyledLineEdit* m_discountEdit = nullptr;
+    StyledLineEdit* m_taxEdit = nullptr;
+    StyledLineEdit* m_netEdit = nullptr;
+    StyledLineEdit* m_notesEdit = nullptr;
 };
 
 #endif
