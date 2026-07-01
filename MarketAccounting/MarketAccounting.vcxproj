@@ -99,6 +99,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cardwidget.cpp" />
+    <ClCompile Include="customerspage.cpp" />
     <ClCompile Include="dashboardpage.cpp" />
     <ClCompile Include="debtspage.cpp" />
     <ClCompile Include="productpage.cpp" />
@@ -117,6 +118,8 @@
     <QtMoc Include="cardwidget.h" />
     <QtMoc Include="dashboardpage.h" />
     <QtMoc Include="dbmanager.h" />
+    <ClInclude Include="customer.h" />
+    <QtMoc Include="customerspage.h" />
     <ClInclude Include="debt.h" />
     <QtMoc Include="debtspage.h" />
     <ClInclude Include="product.h" />

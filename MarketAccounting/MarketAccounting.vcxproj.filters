@@ -82,6 +82,9 @@
     <ClCompile Include="productpage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
+    <ClCompile Include="customerspage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="supplier.h">
@@ -94,6 +97,9 @@
       <Filter>Models</Filter>
     </ClInclude>
     <ClInclude Include="transaction.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="customer.h">
       <Filter>Models</Filter>
     </ClInclude>
   </ItemGroup>
@@ -123,6 +129,9 @@
       <Filter>Database</Filter>
     </QtMoc>
     <QtMoc Include="salespage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="customerspage.h">
       <Filter>Widgets</Filter>
     </QtMoc>
   </ItemGroup>

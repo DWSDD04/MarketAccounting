@@ -36,6 +36,8 @@ struct SaleSession {
     QString paymentType = "cash";
     int accountId = 0;
     QString accountName;
+    int customerId = 0;
+    QString customerName;
     QVector<SaleItem> items;
     double totalLBP = 0.0;
     double totalUSD = 0.0;
@@ -68,11 +70,13 @@ private slots:
     void onChangePriceClicked();
     void calculateNet();
     void onManageColumnsClicked();
+    void onCustomerChanged(int index);
 
 private:
     void setupUI();
     void loadCategories();
     void loadAccounts();
+    void loadCustomers();
     void loadProductsByCategory(int categoryId);
     void refreshSaleTable();
     void refreshTotals();
@@ -89,7 +93,6 @@ private:
     void removeCustomColumn(int colIndex);
     void editCustomColumn(int colIndex, const QString& newName);
 
-    // Tab builders
     void buildSaleInfoTab(QTabWidget* tabs);
     void buildItemsTab(QTabWidget* tabs);
     void buildAccountsTab(QTabWidget* tabs);
@@ -99,7 +102,7 @@ private:
     int m_nextSaleCode = 1000;
     QMap<int, QString> m_categories;
     int m_currentCategoryId = -1;
-    QMap<int, QString> m_customColumns; // col index >= 6  ->  header name
+    QMap<int, QString> m_customColumns;
 
     QButtonGroup* m_slotButtons = nullptr;
     QPushButton* m_slot1Btn = nullptr;
@@ -135,7 +138,6 @@ private:
 
     QSpinBox* m_quantitySpin = nullptr;
 
-    // Microsoft-style form fields
     StyledLineEdit* m_refEdit = nullptr;
     QDateEdit* m_dateEdit = nullptr;
     StyledComboBox* m_customerCombo = nullptr;

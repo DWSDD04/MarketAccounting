@@ -37,6 +37,7 @@ SalesPage::SalesPage(QWidget* parent) : QWidget(parent), m_currentSlot(0)
     setupUI();
     loadCategories();
     loadAccounts();
+    loadCustomers();
     refreshSaleTable();
     refreshTotals();
     updateSlotButtons();
@@ -48,10 +49,6 @@ int SalesPage::generateSaleCode()
 {
     return m_nextSaleCode++;
 }
-
-// ============================================================
-// MAIN SETUPUI — Microsoft-style two-panel layout
-// ============================================================
 
 void SalesPage::setupUI()
 {
@@ -126,14 +123,12 @@ void SalesPage::setupUI()
         layout->addWidget(lbl, row, col);
         };
 
-    // ========= LEFT SIDE: Sale Info =========
     QGroupBox* leftBox = new QGroupBox(tr("معلومات البيع"), this);
     leftBox->setStyleSheet(groupBoxStyle);
     QVBoxLayout* leftLayout = new QVBoxLayout(leftBox);
     leftLayout->setSpacing(10);
     leftLayout->setContentsMargins(20, 20, 20, 20);
 
-    // -- Row: Slot buttons + Code + Payment + Account --
     QHBoxLayout* slotLayout = new QHBoxLayout();
     slotLayout->setSpacing(8);
 
@@ -188,14 +183,12 @@ void SalesPage::setupUI()
 
     leftLayout->addLayout(slotLayout);
 
-    // -- Sale Info Grid --
     QGridLayout* infoGrid = new QGridLayout();
     infoGrid->setSpacing(10);
     infoGrid->setContentsMargins(0, 0, 0, 0);
     infoGrid->setColumnStretch(1, 1);
     infoGrid->setColumnStretch(3, 1);
 
-    // Row 0: Reference | Date
     m_refEdit = new StyledLineEdit(this);
     m_refEdit->setPlaceholderText(tr("Auto or Manual"));
     addLabel(infoGrid, tr("Reference:"), 0, 2);
@@ -215,13 +208,11 @@ void SalesPage::setupUI()
     addLabel(infoGrid, tr("Date:"), 0, 0);
     infoGrid->addWidget(m_dateEdit, 0, 3);
 
-    // Row 1: Customer (full width)
     m_customerCombo = new StyledComboBox(this);
     m_customerCombo->setPlaceholderText(tr("Select Customer"));
     addLabel(infoGrid, tr("Customer:"), 1, 2);
     infoGrid->addWidget(m_customerCombo, 1, 1, 1, 3);
 
-    // Row 2: Discount | Tax
     m_discountEdit = new StyledLineEdit(this);
     m_discountEdit->setPlaceholderText("0.00");
     addLabel(infoGrid, tr("Discount:"), 2, 2);
@@ -232,7 +223,6 @@ void SalesPage::setupUI()
     addLabel(infoGrid, tr("Tax:"), 2, 0);
     infoGrid->addWidget(m_taxEdit, 2, 3);
 
-    // Row 3: Net | Notes
     m_netEdit = new StyledLineEdit(this);
     m_netEdit->setPlaceholderText("0.00");
     m_netEdit->setReadOnly(true);
@@ -250,7 +240,6 @@ void SalesPage::setupUI()
 
     leftLayout->addLayout(infoGrid);
 
-    // -- Items Section --
     QLabel* itemsTitle = new QLabel(tr("اختيار المنتج"));
     itemsTitle->setStyleSheet("font-size: 14px; font-weight: bold; color: #1a3a5c; margin-top: 8px;");
     leftLayout->addWidget(itemsTitle);
@@ -259,7 +248,6 @@ void SalesPage::setupUI()
     m_searchEdit->setPlaceholderText(tr("Search product name or code..."));
     leftLayout->addWidget(m_searchEdit);
 
-    // Category container (for loadCategories)
     QWidget* categoryContainer = new QWidget(this);
     categoryContainer->setObjectName("categoryContainer");
     QVBoxLayout* catLayout = new QVBoxLayout(categoryContainer);
@@ -267,7 +255,6 @@ void SalesPage::setupUI()
     catLayout->setContentsMargins(0, 0, 0, 0);
     leftLayout->addWidget(categoryContainer);
 
-    // Product table
     m_productTable = new QTableView(this);
     m_productModel = new QStandardItemModel(this);
     m_productModel->setHorizontalHeaderLabels({ tr("ID"), tr("Code"), tr("Name"), tr("Price") });
@@ -281,7 +268,6 @@ void SalesPage::setupUI()
     m_productTable->hideColumn(0);
     leftLayout->addWidget(m_productTable);
 
-    // Qty + Add
     QHBoxLayout* addLayout = new QHBoxLayout();
     QLabel* qtyLabel = new QLabel(tr("Qty:"));
     qtyLabel->setStyleSheet("color: #1a3a5c; font-size: 13px; font-weight: 600;");
@@ -304,7 +290,6 @@ void SalesPage::setupUI()
     addLayout->addStretch();
     leftLayout->addLayout(addLayout);
 
-    // -- Navigation Buttons --
     QHBoxLayout* navLayout = new QHBoxLayout();
     m_prevBtn = new QPushButton(tr("<< Previous"));
     m_prevBtn->setStyleSheet(btnStyle);
@@ -318,7 +303,6 @@ void SalesPage::setupUI()
     navLayout->addStretch();
     leftLayout->addLayout(navLayout);
 
-    // -- Action Buttons (placeholders) --
     QHBoxLayout* btnLayout = new QHBoxLayout();
     btnLayout->addStretch();
 
@@ -341,14 +325,12 @@ void SalesPage::setupUI()
     leftLayout->addStretch();
     mainLayout->addWidget(leftBox, 2);
 
-    // ========= RIGHT SIDE: Sale Cart =========
     QGroupBox* rightBox = new QGroupBox(tr("السلة"), this);
     rightBox->setStyleSheet(groupBoxStyle);
     QVBoxLayout* rightLayout = new QVBoxLayout(rightBox);
     rightLayout->setSpacing(10);
     rightLayout->setContentsMargins(20, 20, 20, 20);
 
-    // Sale items table
     m_saleTable = new QTableView(this);
     m_saleModel = new QStandardItemModel(this);
     rebuildSaleModelHeaders();
@@ -361,7 +343,6 @@ void SalesPage::setupUI()
     m_saleTable->hideColumn(0);
     rightLayout->addWidget(m_saleTable, 1);
 
-    // Table action buttons
     QHBoxLayout* tblBtnLayout = new QHBoxLayout();
     m_deleteBtn = new QPushButton(tr("Delete Item"));
     m_deleteBtn->setStyleSheet(deleteBtnStyle);
@@ -380,7 +361,6 @@ void SalesPage::setupUI()
     tblBtnLayout->addStretch();
     rightLayout->addLayout(tblBtnLayout);
 
-    // Totals
     QHBoxLayout* totalLayout = new QHBoxLayout();
     totalLayout->setSpacing(16);
     m_totalLBPLabel = new QLabel(tr("Total LBP: 0"));
@@ -398,7 +378,6 @@ void SalesPage::setupUI()
     totalLayout->addWidget(m_totalUSDLabel);
     rightLayout->addLayout(totalLayout);
 
-    // Product History
     QHBoxLayout* histLayout = new QHBoxLayout();
     histLayout->setSpacing(12);
 
@@ -427,13 +406,14 @@ void SalesPage::setupUI()
 
     mainLayout->addWidget(rightBox, 3);
 
-    // ===== CONNECTIONS =====
     connect(m_slotButtons, QOverload<int>::of(&QButtonGroup::idClicked),
         this, &SalesPage::onSaleSlotClicked);
     connect(m_paymentCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, &SalesPage::onPaymentTypeChanged);
     connect(m_accountCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, &SalesPage::onAccountChanged);
+    connect(m_customerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this, &SalesPage::onCustomerChanged);
     connect(m_prevBtn, &QPushButton::clicked, this, &SalesPage::onPrevSaleClicked);
     connect(m_nextBtn, &QPushButton::clicked, this, &SalesPage::onNextSaleClicked);
     connect(m_editCodeBtn, &QPushButton::clicked, this, &SalesPage::onEditByCodeClicked);
@@ -448,7 +428,6 @@ void SalesPage::setupUI()
     connect(m_taxEdit, &QLineEdit::textChanged, this, &SalesPage::calculateNet);
     connect(manageColsBtn, &QPushButton::clicked, this, &SalesPage::onManageColumnsClicked);
 
-    // QR / Barcode scanner hook (Enter in search box)
     connect(m_searchEdit, &QLineEdit::returnPressed, [=]() {
         QString text = m_searchEdit->text().trimmed();
         if (!text.isEmpty()) {
@@ -458,17 +437,9 @@ void SalesPage::setupUI()
         });
 }
 
-// ============================================================
-// STUBS for removed tab builders (header still declares them)
-// ============================================================
-
 void SalesPage::buildSaleInfoTab(QTabWidget* tabs) { Q_UNUSED(tabs) }
 void SalesPage::buildItemsTab(QTabWidget* tabs) { Q_UNUSED(tabs) }
 void SalesPage::buildAccountsTab(QTabWidget* tabs) { Q_UNUSED(tabs) }
-
-// ============================================================
-// CALCULATE NET
-// ============================================================
 
 void SalesPage::calculateNet()
 {
@@ -482,10 +453,6 @@ void SalesPage::calculateNet()
 
     if (m_netEdit) m_netEdit->setText(QString::number(net, 'f', 2));
 }
-
-// ============================================================
-// ALL EXISTING METHODS (unchanged logic)
-// ============================================================
 
 void SalesPage::loadCategories()
 {
@@ -541,6 +508,35 @@ void SalesPage::loadAccounts()
         m_accountCombo->addItem(name + " (" + type + ")", id);
         m_accountCombo->setItemData(m_accountCombo->count() - 1, type, Qt::UserRole + 1);
     }
+}
+
+void SalesPage::loadCustomers()
+{
+    m_customerCombo->clear();
+    m_customerCombo->addItem(tr("-- Select Customer --"), 0);
+
+    QSqlQuery query("SELECT id, name, phone FROM customers WHERE is_active = 1 ORDER BY name");
+    while (query.next()) {
+        int id = query.value("id").toInt();
+        QString name = query.value("name").toString();
+        QString phone = query.value("phone").toString();
+        QString display = phone.isEmpty() ? name : name + " | " + phone;
+        m_customerCombo->addItem(display, id);
+    }
+}
+
+void SalesPage::onCustomerChanged(int index)
+{
+    if (index <= 0) {
+        m_sessions[m_currentSlot].customerId = 0;
+        m_sessions[m_currentSlot].customerName.clear();
+        return;
+    }
+
+    int customerId = m_customerCombo->itemData(index).toInt();
+    QString display = m_customerCombo->itemText(index);
+    m_sessions[m_currentSlot].customerId = customerId;
+    m_sessions[m_currentSlot].customerName = display;
 }
 
 void SalesPage::onCategoryClicked(int categoryId)
@@ -793,8 +789,11 @@ void SalesPage::onNextSaleClicked()
     m_sessions[m_currentSlot].paymentType = "cash";
     m_sessions[m_currentSlot].accountId = 0;
     m_sessions[m_currentSlot].accountName.clear();
+    m_sessions[m_currentSlot].customerId = 0;
+    m_sessions[m_currentSlot].customerName.clear();
     m_paymentCombo->setCurrentIndex(0);
     m_accountCombo->setCurrentIndex(0);
+    m_customerCombo->setCurrentIndex(0);
     refreshSaleTable();
     refreshTotals();
     calculateNet();
@@ -1013,6 +1012,10 @@ void SalesPage::loadSaleFromSession(int slot)
     if (accIndex >= 0) m_accountCombo->setCurrentIndex(accIndex);
     else m_accountCombo->setCurrentIndex(0);
 
+    int custIndex = m_customerCombo->findData(session.customerId);
+    if (custIndex >= 0) m_customerCombo->setCurrentIndex(custIndex);
+    else m_customerCombo->setCurrentIndex(0);
+
     refreshSaleTable();
     refreshTotals();
     calculateNet();
@@ -1075,10 +1078,6 @@ void SalesPage::updateSlotButtons()
     updateStyle(m_slot2Btn, 1);
     updateStyle(m_slot3Btn, 2);
 }
-
-// ============================================================
-// DYNAMIC COLUMN SYSTEM
-// ============================================================
 
 void SalesPage::rebuildSaleModelHeaders()
 {
@@ -1191,6 +1190,7 @@ void SalesPage::onManageColumnsClicked()
         bool ok;
         QString newName = QInputDialog::getText(&dialog, tr("Edit Column"),
             tr("New name:"), QLineEdit::Normal, oldName, &ok);
+
         if (ok && !newName.trimmed().isEmpty() && colIndex >= 0) {
             editCustomColumn(colIndex, newName.trimmed());
             list->currentItem()->setText(newName.trimmed());
@@ -1216,10 +1216,6 @@ void SalesPage::onManageColumnsClicked()
 
     dialog.exec();
 }
-
-// ============================================================
-// QR / BARCODE SCANNER HOOK
-// ============================================================
 
 void SalesPage::scanProductCode(const QString& code)
 {
