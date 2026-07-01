@@ -24,6 +24,7 @@
 #include <QLineEdit>
 #include <QGroupBox>
 #include <QDateEdit>
+#include <QListWidget>
 
 SalesPage::SalesPage(QWidget* parent) : QWidget(parent), m_currentSlot(0)
 {
@@ -350,9 +351,7 @@ void SalesPage::setupUI()
     // Sale items table
     m_saleTable = new QTableView(this);
     m_saleModel = new QStandardItemModel(this);
-    m_saleModel->setHorizontalHeaderLabels({
-        tr("ID"), tr("Code"), tr("Product Name"), tr("Qty"), tr("Unit Price"), tr("Sum")
-        });
+    rebuildSaleModelHeaders();
     m_saleTable->setModel(m_saleModel);
     m_saleTable->setStyleSheet(tableStyle);
     m_saleTable->horizontalHeader()->setStretchLastSection(true);
@@ -370,9 +369,14 @@ void SalesPage::setupUI()
     m_editBtn->setStyleSheet(btnStyle);
     m_changePriceBtn = new QPushButton(tr("Change Price"));
     m_changePriceBtn->setStyleSheet(btnStyle);
+
+    QPushButton* manageColsBtn = new QPushButton(tr("Manage Columns"));
+    manageColsBtn->setStyleSheet(btnStyle);
+
     tblBtnLayout->addWidget(m_deleteBtn);
     tblBtnLayout->addWidget(m_editBtn);
     tblBtnLayout->addWidget(m_changePriceBtn);
+    tblBtnLayout->addWidget(manageColsBtn);
     tblBtnLayout->addStretch();
     rightLayout->addLayout(tblBtnLayout);
 
@@ -442,6 +446,16 @@ void SalesPage::setupUI()
     connect(m_productTable, &QTableView::clicked, this, &SalesPage::onProductSelected);
     connect(m_discountEdit, &QLineEdit::textChanged, this, &SalesPage::calculateNet);
     connect(m_taxEdit, &QLineEdit::textChanged, this, &SalesPage::calculateNet);
+    connect(manageColsBtn, &QPushButton::clicked, this, &SalesPage::onManageColumnsClicked);
+
+    // QR / Barcode scanner hook (Enter in search box)
+    connect(m_searchEdit, &QLineEdit::returnPressed, [=]() {
+        QString text = m_searchEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            scanProductCode(text);
+            m_searchEdit->clear();
+        }
+        });
 }
 
 // ============================================================
@@ -509,7 +523,8 @@ void SalesPage::loadCategories()
     catLayout->addStretch();
 
     if (!m_categories.isEmpty()) {
-        onCategoryClicked(m_categories.firstKey());
+        m_currentCategoryId = m_categories.firstKey();
+        onCategoryClicked(m_currentCategoryId);
     }
 }
 
@@ -530,6 +545,7 @@ void SalesPage::loadAccounts()
 
 void SalesPage::onCategoryClicked(int categoryId)
 {
+    m_currentCategoryId = categoryId;
     loadProductsByCategory(categoryId);
 }
 
@@ -542,7 +558,7 @@ void SalesPage::loadProductsByCategory(int categoryId)
         "SELECT id, code, name, sale_price, quantity FROM products "
         "WHERE category_id = :catId AND is_active = 1 ORDER BY name"
     );
-    query.bindValue("catId", categoryId);
+    query.bindValue(":catId", categoryId);
 
     if (!query.exec()) return;
 
@@ -831,29 +847,51 @@ void SalesPage::onEditByCodeClicked()
 
 void SalesPage::onSearchTextChanged(const QString& text)
 {
-    for (int i = 0; i < m_productModel->rowCount(); ++i) {
-        bool match = false;
-        for (int j = 1; j < m_productModel->columnCount(); ++j) {
-            if (m_productModel->item(i, j)->text().contains(text, Qt::CaseInsensitive)) {
-                match = true;
-                break;
-            }
+    QString trimmed = text.trimmed();
+
+    if (trimmed.isEmpty()) {
+        if (m_currentCategoryId >= 0) {
+            loadProductsByCategory(m_currentCategoryId);
         }
-        m_productTable->setRowHidden(i, !match);
+        else if (!m_categories.isEmpty()) {
+            onCategoryClicked(m_categories.firstKey());
+        }
+        return;
     }
 
-    SaleSession& session = m_sessions[m_currentSlot];
-    for (int i = 0; i < m_saleModel->rowCount(); ++i) {
-        bool match = false;
-        for (int j = 1; j < m_saleModel->columnCount(); ++j) {
-            if (m_saleModel->item(i, j) &&
-                m_saleModel->item(i, j)->text().contains(text, Qt::CaseInsensitive)) {
-                match = true;
-                break;
-            }
-        }
-        m_saleTable->setRowHidden(i, !match);
+    m_productModel->removeRows(0, m_productModel->rowCount());
+
+    QSqlQuery query;
+    query.prepare(
+        "SELECT id, code, name, sale_price, quantity FROM products "
+        "WHERE (code LIKE :search OR name LIKE :search) AND is_active = 1 "
+        "ORDER BY name"
+    );
+    query.bindValue(":search", "%" + trimmed + "%");
+
+    if (!query.exec()) {
+        qDebug() << "Search error:" << query.lastError().text();
+        return;
     }
+
+    int row = 0;
+    while (query.next()) {
+        int id = query.value("id").toInt();
+        QString code = query.value("code").toString();
+        QString name = query.value("name").toString();
+        double price = query.value("sale_price").toDouble();
+
+        m_productModel->insertRow(row);
+        QStandardItem* idItem = new QStandardItem(QString::number(id));
+        idItem->setData(id, Qt::UserRole);
+        m_productModel->setItem(row, 0, idItem);
+        m_productModel->setItem(row, 1, new QStandardItem(code));
+        m_productModel->setItem(row, 2, new QStandardItem(name));
+        m_productModel->setItem(row, 3, new QStandardItem(QString::number(price, 'f', 2)));
+        row++;
+    }
+    m_productTable->resizeColumnsToContents();
+    m_productTable->hideColumn(0);
 }
 
 void SalesPage::onSaleTableClicked(const QModelIndex& index)
@@ -880,6 +918,11 @@ void SalesPage::refreshSaleTable()
         m_saleModel->setItem(i, 3, new QStandardItem(QString::number(item.quantity)));
         m_saleModel->setItem(i, 4, new QStandardItem(QString::number(item.price, 'f', 2)));
         m_saleModel->setItem(i, 5, new QStandardItem(QString::number(item.lineTotal, 'f', 2)));
+
+        for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+            QString val = item.customValues.value(it.value(), "").toString();
+            m_saleModel->setItem(i, it.key(), new QStandardItem(val));
+        }
     }
 
     m_saleTable->resizeColumnsToContents();
@@ -913,7 +956,7 @@ void SalesPage::refreshProductHistory(int productId)
 
     QSqlQuery q1;
     q1.prepare("SELECT COALESCE(SUM(quantity),0) as total_sold FROM sale_items WHERE product_id = :pid");
-    q1.bindValue("pid", productId);
+    q1.bindValue(":pid", productId);
     int totalSold = 0;
     if (q1.exec() && q1.next()) {
         totalSold = q1.value("total_sold").toInt();
@@ -921,7 +964,7 @@ void SalesPage::refreshProductHistory(int productId)
 
     QSqlQuery q2;
     q2.prepare("SELECT quantity FROM products WHERE id = :pid");
-    q2.bindValue("pid", productId);
+    q2.bindValue(":pid", productId);
     int remaining = 0;
     if (q2.exec() && q2.next()) {
         remaining = q2.value("quantity").toInt();
@@ -929,7 +972,7 @@ void SalesPage::refreshProductHistory(int productId)
 
     QSqlQuery q3;
     q3.prepare("SELECT COALESCE(AVG(unit_price),0) as avg_price FROM sale_items WHERE product_id = :pid");
-    q3.bindValue("pid", productId);
+    q3.bindValue(":pid", productId);
     double avgPrice = 0.0;
     if (q3.exec() && q3.next()) {
         avgPrice = q3.value("avg_price").toDouble();
@@ -940,7 +983,7 @@ void SalesPage::refreshProductHistory(int productId)
         "SELECT MAX(s.created_at) as last_sale FROM sales s "
         "JOIN sale_items si ON s.id = si.sale_id WHERE si.product_id = :pid"
     );
-    q4.bindValue("pid", productId);
+    q4.bindValue(":pid", productId);
     QString lastSale = tr("Never");
     if (q4.exec() && q4.next()) {
         QDateTime dt = q4.value("last_sale").toDateTime();
@@ -1031,4 +1074,202 @@ void SalesPage::updateSlotButtons()
     updateStyle(m_slot1Btn, 0);
     updateStyle(m_slot2Btn, 1);
     updateStyle(m_slot3Btn, 2);
+}
+
+// ============================================================
+// DYNAMIC COLUMN SYSTEM
+// ============================================================
+
+void SalesPage::rebuildSaleModelHeaders()
+{
+    QStringList headers;
+    headers << tr("ID") << tr("Code") << tr("Product Name") << tr("Qty")
+        << tr("Unit Price") << tr("Sum");
+
+    for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+        headers << it.value();
+    }
+
+    m_saleModel->setHorizontalHeaderLabels(headers);
+}
+
+void SalesPage::addCustomColumn(const QString& name)
+{
+    int newIndex = 6 + m_customColumns.size();
+    m_customColumns[newIndex] = name;
+    rebuildSaleModelHeaders();
+    refreshSaleTable();
+}
+
+void SalesPage::removeCustomColumn(int colIndex)
+{
+    if (!m_customColumns.contains(colIndex)) return;
+
+    QString oldName = m_customColumns[colIndex];
+    for (auto& session : m_sessions) {
+        for (auto& item : session.items) {
+            item.customValues.remove(oldName);
+        }
+    }
+
+    m_customColumns.remove(colIndex);
+
+    QMap<int, QString> newCols;
+    int idx = 6;
+    for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+        newCols[idx++] = it.value();
+    }
+    m_customColumns = newCols;
+
+    rebuildSaleModelHeaders();
+    refreshSaleTable();
+}
+
+void SalesPage::editCustomColumn(int colIndex, const QString& newName)
+{
+    if (!m_customColumns.contains(colIndex)) return;
+
+    QString oldName = m_customColumns[colIndex];
+    m_customColumns[colIndex] = newName;
+
+    for (auto& session : m_sessions) {
+        for (auto& item : session.items) {
+            if (item.customValues.contains(oldName)) {
+                QVariant v = item.customValues.take(oldName);
+                item.customValues[newName] = v;
+            }
+        }
+    }
+
+    rebuildSaleModelHeaders();
+    refreshSaleTable();
+}
+
+void SalesPage::onManageColumnsClicked()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Manage Sale Columns"));
+    dialog.setLayoutDirection(Qt::RightToLeft);
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+
+    QLabel* info = new QLabel(tr("Current custom columns:"));
+    info->setStyleSheet("font-weight: 600; color: #1a3a5c;");
+    layout->addWidget(info);
+
+    QListWidget* list = new QListWidget(&dialog);
+    for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+        list->addItem(it.value());
+    }
+    layout->addWidget(list);
+
+    QHBoxLayout* btnLayout = new QHBoxLayout();
+    QPushButton* addBtn = new QPushButton(tr("Add"));
+    QPushButton* editBtn = new QPushButton(tr("Edit"));
+    QPushButton* delBtn = new QPushButton(tr("Delete"));
+    btnLayout->addWidget(addBtn);
+    btnLayout->addWidget(editBtn);
+    btnLayout->addWidget(delBtn);
+    layout->addLayout(btnLayout);
+
+    connect(addBtn, &QPushButton::clicked, [&]() {
+        bool ok;
+        QString name = QInputDialog::getText(&dialog, tr("Add Column"),
+            tr("Column name:"), QLineEdit::Normal, "", &ok);
+        if (ok && !name.trimmed().isEmpty()) {
+            addCustomColumn(name.trimmed());
+            list->addItem(name.trimmed());
+        }
+        });
+
+    connect(editBtn, &QPushButton::clicked, [&]() {
+        if (!list->currentItem()) return;
+        QString oldName = list->currentItem()->text();
+        int colIndex = -1;
+        for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+            if (it.value() == oldName) { colIndex = it.key(); break; }
+        }
+        bool ok;
+        QString newName = QInputDialog::getText(&dialog, tr("Edit Column"),
+            tr("New name:"), QLineEdit::Normal, oldName, &ok);
+        if (ok && !newName.trimmed().isEmpty() && colIndex >= 0) {
+            editCustomColumn(colIndex, newName.trimmed());
+            list->currentItem()->setText(newName.trimmed());
+        }
+        });
+
+    connect(delBtn, &QPushButton::clicked, [&]() {
+        if (!list->currentItem()) return;
+        QString name = list->currentItem()->text();
+        int colIndex = -1;
+        for (auto it = m_customColumns.begin(); it != m_customColumns.end(); ++it) {
+            if (it.value() == name) { colIndex = it.key(); break; }
+        }
+        if (colIndex >= 0) {
+            removeCustomColumn(colIndex);
+            delete list->takeItem(list->currentRow());
+        }
+        });
+
+    QDialogButtonBox* closeBox = new QDialogButtonBox(QDialogButtonBox::Close);
+    connect(closeBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(closeBox);
+
+    dialog.exec();
+}
+
+// ============================================================
+// QR / BARCODE SCANNER HOOK
+// ============================================================
+
+void SalesPage::scanProductCode(const QString& code)
+{
+    if (code.trimmed().isEmpty()) return;
+
+    QSqlQuery query;
+    query.prepare("SELECT id, code, name, sale_price, quantity FROM products WHERE code = :code AND is_active = 1");
+    query.bindValue(":code", code.trimmed());
+
+    if (!query.exec() || !query.next()) {
+        QMessageBox::warning(this, tr("Product Not Found"),
+            tr("No product found with code: %1").arg(code));
+        return;
+    }
+
+    int productId = query.value("id").toInt();
+    QString dbCode = query.value("code").toString();
+    QString name = query.value("name").toString();
+    double price = query.value("sale_price").toDouble();
+    int stockQty = query.value("quantity").toInt();
+
+    if (stockQty <= 0) {
+        QMessageBox::warning(this, tr("Out of Stock"),
+            tr("Product %1 is out of stock.").arg(name));
+        return;
+    }
+
+    SaleSession& session = m_sessions[m_currentSlot];
+
+    for (int i = 0; i < session.items.size(); ++i) {
+        if (session.items[i].productId == productId) {
+            session.items[i].quantity += 1;
+            session.items[i].lineTotal = session.items[i].quantity * session.items[i].price;
+            refreshSaleTable();
+            refreshTotals();
+            calculateNet();
+            return;
+        }
+    }
+
+    SaleItem item;
+    item.productId = productId;
+    item.code = dbCode;
+    item.name = name;
+    item.price = price;
+    item.quantity = 1;
+    item.lineTotal = price;
+    session.items.append(item);
+
+    refreshSaleTable();
+    refreshTotals();
+    calculateNet();
 }

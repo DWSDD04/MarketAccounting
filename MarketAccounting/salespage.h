@@ -14,6 +14,7 @@
 #include <QVector>
 #include <QTabWidget>
 #include <QDateEdit>
+#include <QVariant>
 
 class StyledLineEdit;
 class StyledComboBox;
@@ -26,6 +27,7 @@ struct SaleItem {
     double price = 0.0;
     int quantity = 1;
     double lineTotal = 0.0;
+    QMap<QString, QVariant> customValues;
 };
 
 struct SaleSession {
@@ -46,6 +48,9 @@ public:
     explicit SalesPage(QWidget* parent = nullptr);
     ~SalesPage();
 
+public slots:
+    void scanProductCode(const QString& code);
+
 private slots:
     void onCategoryClicked(int categoryId);
     void onProductSelected(const QModelIndex& index);
@@ -62,6 +67,7 @@ private slots:
     void onSaleTableClicked(const QModelIndex& index);
     void onChangePriceClicked();
     void calculateNet();
+    void onManageColumnsClicked();
 
 private:
     void setupUI();
@@ -78,6 +84,11 @@ private:
     void updateSlotButtons();
     void enforcePaymentRules();
 
+    void rebuildSaleModelHeaders();
+    void addCustomColumn(const QString& name);
+    void removeCustomColumn(int colIndex);
+    void editCustomColumn(int colIndex, const QString& newName);
+
     // Tab builders
     void buildSaleInfoTab(QTabWidget* tabs);
     void buildItemsTab(QTabWidget* tabs);
@@ -87,6 +98,8 @@ private:
     int m_currentSlot = 0;
     int m_nextSaleCode = 1000;
     QMap<int, QString> m_categories;
+    int m_currentCategoryId = -1;
+    QMap<int, QString> m_customColumns; // col index >= 6  ->  header name
 
     QButtonGroup* m_slotButtons = nullptr;
     QPushButton* m_slot1Btn = nullptr;
