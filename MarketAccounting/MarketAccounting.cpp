@@ -6,6 +6,7 @@
 #include "salespage.h"
 #include "dashboardpage.h"
 #include "customerspage.h"
+#include "reportspage.h"
 
 #include <QPushButton>
 #include <QLabel>
@@ -65,6 +66,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     QPushButton* prodBtn = createNavBtn(tr("Products"));
     QPushButton* salesBtn = createNavBtn(tr("Sales & Accounting"));
     QPushButton* custBtn = createNavBtn(tr("Customers"));
+    QPushButton* reportBtn = createNavBtn(tr("Reports"));
 
     dashBtn->setChecked(true);
 
@@ -73,6 +75,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     sidebarLayout->addWidget(prodBtn);
     sidebarLayout->addWidget(salesBtn);
     sidebarLayout->addWidget(custBtn);
+    sidebarLayout->addWidget(reportBtn);
     sidebarLayout->addStretch();
 
     mainLayout->addWidget(sidebar);
@@ -84,12 +87,14 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     ProductsPage* prodPage = new ProductsPage();
     SalesPage* salesPage = new SalesPage();
     CustomersPage* custPage = new CustomersPage();
+    ReportsPage* reportPage = new ReportsPage();
 
     stack->addWidget(dashPage);
     stack->addWidget(suppPage);
     stack->addWidget(prodPage);
     stack->addWidget(salesPage);
     stack->addWidget(custPage);
+    stack->addWidget(reportPage);
 
     mainLayout->addWidget(stack, 1);
     setCentralWidget(central);
@@ -101,6 +106,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         prodBtn->setChecked(false);
         salesBtn->setChecked(false);
         custBtn->setChecked(false);
+        reportBtn->setChecked(false);
         });
     connect(suppBtn, &QPushButton::clicked, [=]() {
         stack->setCurrentIndex(1);
@@ -109,6 +115,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         prodBtn->setChecked(false);
         salesBtn->setChecked(false);
         custBtn->setChecked(false);
+        reportBtn->setChecked(false);
         });
     connect(prodBtn, &QPushButton::clicked, [=]() {
         stack->setCurrentIndex(2);
@@ -117,6 +124,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         suppBtn->setChecked(false);
         salesBtn->setChecked(false);
         custBtn->setChecked(false);
+        reportBtn->setChecked(false);
         });
     connect(salesBtn, &QPushButton::clicked, [=]() {
         stack->setCurrentIndex(3);
@@ -125,6 +133,7 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         suppBtn->setChecked(false);
         prodBtn->setChecked(false);
         custBtn->setChecked(false);
+        reportBtn->setChecked(false);
         });
     connect(custBtn, &QPushButton::clicked, [=]() {
         stack->setCurrentIndex(4);
@@ -133,6 +142,16 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         suppBtn->setChecked(false);
         prodBtn->setChecked(false);
         salesBtn->setChecked(false);
+        reportBtn->setChecked(false);
+        });
+    connect(reportBtn, &QPushButton::clicked, [=]() {
+        stack->setCurrentIndex(5);
+        reportBtn->setChecked(true);
+        dashBtn->setChecked(false);
+        suppBtn->setChecked(false);
+        prodBtn->setChecked(false);
+        salesBtn->setChecked(false);
+        custBtn->setChecked(false);
         });
 }
 

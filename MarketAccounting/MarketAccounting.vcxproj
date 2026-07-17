@@ -100,9 +100,15 @@
   <ItemGroup>
     <ClCompile Include="cardwidget.cpp" />
     <ClCompile Include="customerspage.cpp" />
-    <ClCompile Include="dashboardpage.cpp" />
+    <QtMoc Include="dashboardpage.cpp">
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).moc</QtMocFileName>
+      <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
+      <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
+    </QtMoc>
     <ClCompile Include="debtspage.cpp" />
     <ClCompile Include="productpage.cpp" />
+    <ClCompile Include="reportspage.cpp" />
     <ClCompile Include="salespage.cpp" />
     <ClCompile Include="styledcombobox.cpp" />
     <ClCompile Include="styledlineedit.cpp" />
@@ -127,6 +133,7 @@
     <QtMoc Include="styledcombobox.h" />
     <QtMoc Include="styledlineedit.h" />
     <QtMoc Include="salespage.h" />
+    <QtMoc Include="reportspage.h" />
     <ClInclude Include="supplier.h" />
     <QtMoc Include="supplierspage.h" />
     <ClInclude Include="transaction.h" />

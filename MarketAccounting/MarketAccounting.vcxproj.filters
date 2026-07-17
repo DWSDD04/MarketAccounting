@@ -85,6 +85,9 @@
     <ClCompile Include="customerspage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
+    <ClCompile Include="reportspage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="supplier.h">
@@ -132,6 +135,9 @@
       <Filter>Widgets</Filter>
     </QtMoc>
     <QtMoc Include="customerspage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="reportspage.h">
       <Filter>Widgets</Filter>
     </QtMoc>
   </ItemGroup>
