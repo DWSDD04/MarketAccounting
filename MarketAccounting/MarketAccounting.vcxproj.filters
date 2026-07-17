@@ -64,9 +64,6 @@
     <ClCompile Include="debtspage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
-    <ClCompile Include="dashboardpage.cpp">
-      <Filter>Widgets</Filter>
-    </ClCompile>
     <ClCompile Include="styledlineedit.cpp">
       <Filter>Widgets\Custom</Filter>
     </ClCompile>
@@ -88,6 +85,18 @@
     <ClCompile Include="reportspage.cpp">
       <Filter>Widgets</Filter>
     </ClCompile>
+    <ClCompile Include="logindialog.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="purchasepage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="returnspage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="expensespage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="supplier.h">
@@ -103,6 +112,9 @@
       <Filter>Models</Filter>
     </ClInclude>
     <ClInclude Include="customer.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="user.h">
       <Filter>Models</Filter>
     </ClInclude>
   </ItemGroup>
@@ -138,6 +150,21 @@
       <Filter>Widgets</Filter>
     </QtMoc>
     <QtMoc Include="reportspage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="dashboardpage.cpp">
+      <Filter>Source Files</Filter>
+    </QtMoc>
+    <QtMoc Include="expensespage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="returnspage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="purchasepage.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="logindialog.h">
       <Filter>Widgets</Filter>
     </QtMoc>
   </ItemGroup>

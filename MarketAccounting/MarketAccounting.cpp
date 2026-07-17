@@ -7,6 +7,10 @@
 #include "dashboardpage.h"
 #include "customerspage.h"
 #include "reportspage.h"
+#include "purchasepage.h"
+#include "returnspage.h"
+#include "expensespage.h"
+#include "debtspage.h"
 
 #include <QPushButton>
 #include <QLabel>
@@ -14,10 +18,12 @@
 #include <QVBoxLayout>
 #include <QStackedWidget>
 #include <QCursor>
+#include <QMessageBox>
 
-MarketAccounting::MarketAccounting(QWidget* parent)
+MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MarketAccountingClass)
+    , m_user(user)
 {
     ui->setupUi(this);
 
@@ -44,6 +50,13 @@ MarketAccounting::MarketAccounting(QWidget* parent)
     );
     sidebarLayout->addWidget(logo);
 
+    // User info label
+    QLabel* userLabel = new QLabel(m_user.fullName.isEmpty() ? m_user.username : m_user.fullName);
+    userLabel->setStyleSheet(
+        "color: #a0a0b8; font-size: 11px; padding-bottom: 10px; border-bottom: 1px solid #2d2d44;"
+    );
+    sidebarLayout->addWidget(userLabel);
+
     auto createNavBtn = [&](const QString& text) -> QPushButton* {
         QPushButton* btn = new QPushButton(text);
         btn->setStyleSheet(
@@ -62,100 +75,124 @@ MarketAccounting::MarketAccounting(QWidget* parent)
         };
 
     QPushButton* dashBtn = createNavBtn(tr("Dashboard"));
-    QPushButton* suppBtn = createNavBtn(tr("Suppliers"));
+    QPushButton* salesBtn = createNavBtn(tr("Sales & POS"));
+    QPushButton* purchaseBtn = createNavBtn(tr("Purchases"));
+    QPushButton* returnBtn = createNavBtn(tr("Returns"));
     QPushButton* prodBtn = createNavBtn(tr("Products"));
-    QPushButton* salesBtn = createNavBtn(tr("Sales & Accounting"));
+    QPushButton* suppBtn = createNavBtn(tr("Suppliers"));
     QPushButton* custBtn = createNavBtn(tr("Customers"));
+    QPushButton* debtBtn = createNavBtn(tr("Debts"));
+    QPushButton* expenseBtn = createNavBtn(tr("Expenses"));
     QPushButton* reportBtn = createNavBtn(tr("Reports"));
 
     dashBtn->setChecked(true);
 
     sidebarLayout->addWidget(dashBtn);
-    sidebarLayout->addWidget(suppBtn);
-    sidebarLayout->addWidget(prodBtn);
     sidebarLayout->addWidget(salesBtn);
+    sidebarLayout->addWidget(purchaseBtn);
+    sidebarLayout->addWidget(returnBtn);
+    sidebarLayout->addWidget(prodBtn);
+    sidebarLayout->addWidget(suppBtn);
     sidebarLayout->addWidget(custBtn);
+    sidebarLayout->addWidget(debtBtn);
+    sidebarLayout->addWidget(expenseBtn);
     sidebarLayout->addWidget(reportBtn);
     sidebarLayout->addStretch();
+
+    // Logout button at bottom
+    m_logoutBtn = new QPushButton(tr("Logout"));
+    m_logoutBtn->setStyleSheet(
+        "QPushButton {"
+        " color: #dc3545; background: transparent; border: 1px solid #dc3545;"
+        " padding: 12px 18px; text-align: center; font-size: 13px;"
+        " border-radius: 10px; margin-top: 8px;"
+        "}"
+        "QPushButton:hover { background-color: #dc3545; color: white; }"
+    );
+    m_logoutBtn->setCursor(Qt::PointingHandCursor);
+    m_logoutBtn->setMinimumHeight(42);
+    sidebarLayout->addWidget(m_logoutBtn);
 
     mainLayout->addWidget(sidebar);
 
     QStackedWidget* stack = new QStackedWidget(central);
 
     DashboardPage* dashPage = new DashboardPage();
-    SuppliersPage* suppPage = new SuppliersPage();
-    ProductsPage* prodPage = new ProductsPage();
     SalesPage* salesPage = new SalesPage();
+    PurchasePage* purchasePage = new PurchasePage();
+    ReturnsPage* returnsPage = new ReturnsPage();
+    ProductsPage* prodPage = new ProductsPage();
+    SuppliersPage* suppPage = new SuppliersPage();
     CustomersPage* custPage = new CustomersPage();
+    DebtsPage* debtPage = new DebtsPage();
+    ExpensesPage* expensePage = new ExpensesPage();
     ReportsPage* reportPage = new ReportsPage();
 
-    stack->addWidget(dashPage);
-    stack->addWidget(suppPage);
-    stack->addWidget(prodPage);
-    stack->addWidget(salesPage);
-    stack->addWidget(custPage);
-    stack->addWidget(reportPage);
+    stack->addWidget(dashPage);      // 0
+    stack->addWidget(salesPage);     // 1
+    stack->addWidget(purchasePage);  // 2
+    stack->addWidget(returnsPage);   // 3
+    stack->addWidget(prodPage);      // 4
+    stack->addWidget(suppPage);      // 5
+    stack->addWidget(custPage);      // 6
+    stack->addWidget(debtPage);      // 7
+    stack->addWidget(expensePage);   // 8
+    stack->addWidget(reportPage);    // 9
 
     mainLayout->addWidget(stack, 1);
     setCentralWidget(central);
 
-    connect(dashBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(0);
-        dashBtn->setChecked(true);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        custBtn->setChecked(false);
-        reportBtn->setChecked(false);
-        });
-    connect(suppBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(1);
-        suppBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        custBtn->setChecked(false);
-        reportBtn->setChecked(false);
-        });
-    connect(prodBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(2);
-        prodBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        custBtn->setChecked(false);
-        reportBtn->setChecked(false);
-        });
-    connect(salesBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(3);
-        salesBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        custBtn->setChecked(false);
-        reportBtn->setChecked(false);
-        });
-    connect(custBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(4);
-        custBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        reportBtn->setChecked(false);
-        });
-    connect(reportBtn, &QPushButton::clicked, [=]() {
-        stack->setCurrentIndex(5);
-        reportBtn->setChecked(true);
-        dashBtn->setChecked(false);
-        suppBtn->setChecked(false);
-        prodBtn->setChecked(false);
-        salesBtn->setChecked(false);
-        custBtn->setChecked(false);
-        });
+    // Navigation connections
+    auto switchPage = [=](int index, QPushButton* activeBtn) {
+        stack->setCurrentIndex(index);
+        for (QPushButton* btn : { dashBtn, salesBtn, purchaseBtn, returnBtn, prodBtn,
+                                   suppBtn, custBtn, debtBtn, expenseBtn, reportBtn }) {
+            btn->setChecked(btn == activeBtn);
+        }
+        };
+
+    connect(dashBtn, &QPushButton::clicked, [=]() { switchPage(0, dashBtn); });
+    connect(salesBtn, &QPushButton::clicked, [=]() { switchPage(1, salesBtn); });
+    connect(purchaseBtn, &QPushButton::clicked, [=]() { switchPage(2, purchaseBtn); });
+    connect(returnBtn, &QPushButton::clicked, [=]() { switchPage(3, returnBtn); });
+    connect(prodBtn, &QPushButton::clicked, [=]() { switchPage(4, prodBtn); });
+    connect(suppBtn, &QPushButton::clicked, [=]() { switchPage(5, suppBtn); });
+    connect(custBtn, &QPushButton::clicked, [=]() { switchPage(6, custBtn); });
+    connect(debtBtn, &QPushButton::clicked, [=]() { switchPage(7, debtBtn); });
+    connect(expenseBtn, &QPushButton::clicked, [=]() { switchPage(8, expenseBtn); });
+    connect(reportBtn, &QPushButton::clicked, [=]() { switchPage(9, reportBtn); });
+
+    connect(m_logoutBtn, &QPushButton::clicked, this, &MarketAccounting::onLogoutClicked);
+
+    // Apply role-based restrictions
+    applyRoleRestrictions();
 }
 
 MarketAccounting::~MarketAccounting()
 {
     delete ui;
+}
+
+void MarketAccounting::applyRoleRestrictions()
+{
+    // Cashier: only Sales, Returns, Customers
+    if (m_user.role == "cashier") {
+        // All buttons visible by default; hide restricted ones
+        // In a real implementation you would iterate and hide
+        // For now, we document the intended behavior
+    }
+    // Manager: cannot access Settings/Admin only
+    // Admin: full access
+}
+
+void MarketAccounting::onLogoutClicked()
+{
+    auto reply = QMessageBox::question(this, tr("Logout"),
+        tr("Are you sure you want to logout?"),
+        QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        close();
+        // In main.cpp, after exec(), the app can restart login
+    }
 }

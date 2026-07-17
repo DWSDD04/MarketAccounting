@@ -107,8 +107,12 @@
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
     </QtMoc>
     <ClCompile Include="debtspage.cpp" />
+    <ClCompile Include="expensespage.cpp" />
+    <ClCompile Include="logindialog.cpp" />
     <ClCompile Include="productpage.cpp" />
+    <ClCompile Include="purchasepage.cpp" />
     <ClCompile Include="reportspage.cpp" />
+    <ClCompile Include="returnspage.cpp" />
     <ClCompile Include="salespage.cpp" />
     <ClCompile Include="styledcombobox.cpp" />
     <ClCompile Include="styledlineedit.cpp" />
@@ -121,6 +125,11 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="expensespage.h" />
+    <QtMoc Include="logindialog.h" />
+    <QtMoc Include="purchasepage.h" />
+    <QtMoc Include="returnspage.h" />
+    <ClInclude Include="user.h" />
     <QtMoc Include="cardwidget.h" />
     <QtMoc Include="dashboardpage.h" />
     <QtMoc Include="dbmanager.h" />

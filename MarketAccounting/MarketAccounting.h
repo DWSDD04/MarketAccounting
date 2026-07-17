@@ -2,6 +2,8 @@
 #define MARKETACCOUNTING_H
 
 #include <QMainWindow>
+#include <QPushButton>
+#include "user.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MarketAccountingClass; }
@@ -12,11 +14,19 @@ class MarketAccounting : public QMainWindow
     Q_OBJECT
 
 public:
-    MarketAccounting(QWidget* parent = nullptr);
+    explicit MarketAccounting(const User& user, QWidget* parent = nullptr);
     ~MarketAccounting();
 
+private slots:
+    void onLogoutClicked();
+
 private:
+    void setupNavigation();
+    void applyRoleRestrictions();
+
     Ui::MarketAccountingClass* ui;
+    User m_user;
+    QPushButton* m_logoutBtn = nullptr;
 };
 
 #endif
