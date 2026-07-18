@@ -17,7 +17,6 @@
 
 // ─── Simple Chart Widget ───
 class MiniBarChart : public QWidget {
-    Q_OBJECT  // ← ADDED THIS
 public:
     explicit MiniBarChart(QWidget* parent = nullptr) : QWidget(parent) {}
     QVector<QPair<QString, double>> data;
@@ -348,7 +347,7 @@ void DashboardPage::loadMonthlyChartData()
         }
     }
 
-    MiniBarChart* chart = qobject_cast<MiniBarChart*>(m_chartWidget);
+    MiniBarChart* chart = static_cast<MiniBarChart*>(m_chartWidget);
     if (chart) {
         chart->data = m_chartData;
         chart->maxValue = m_chartMax * 1.1;

@@ -100,12 +100,12 @@
   <ItemGroup>
     <ClCompile Include="cardwidget.cpp" />
     <ClCompile Include="customerspage.cpp" />
-    <QtMoc Include="dashboardpage.cpp">
+    <ClCompile Include="dashboardpage.cpp">
       <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">input</DynamicSource>
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).moc</QtMocFileName>
       <DynamicSource Condition="'$(Configuration)|$(Platform)'=='Release|x64'">input</DynamicSource>
       <QtMocFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).moc</QtMocFileName>
-    </QtMoc>
+    </ClCompile>
     <ClCompile Include="debtspage.cpp" />
     <ClCompile Include="expensespage.cpp" />
     <ClCompile Include="logindialog.cpp" />

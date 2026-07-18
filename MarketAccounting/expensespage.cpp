@@ -495,21 +495,19 @@ void ExpensesPage::onExportClicked()
 
     QTextStream stream(&file);
     stream.setEncoding(QStringConverter::Utf8);
-    stream << QString("﻿");
+    stream << QString("\uFEFF");
 
     QStringList headers;
     headers << "Date" << "Category" << "Amount" << "Payment" << "Account" << "Description";
-    stream << """ << headers.join("","") << ""
-        ";
+    stream << "\"" << headers.join("\",\"") << "\"\n";
 
-        for (int r = 0; r < m_tableModel->rowCount(); ++r) {
-            QStringList row;
-            for (int c = 1; c <= 6; ++c) {
-                row << m_tableModel->item(r, c)->text();
-            }
-            stream << """ << row.join("","") << ""
-                ";
+    for (int r = 0; r < m_tableModel->rowCount(); ++r) {
+        QStringList row;
+        for (int c = 1; c <= 6; ++c) {
+            row << m_tableModel->item(r, c)->text();
         }
+        stream << "\"" << row.join("\",\"") << "\"\n";
+    }
 
     file.close();
     QMessageBox::information(this, tr("Success"), tr("Exported successfully to ") + fileName);
