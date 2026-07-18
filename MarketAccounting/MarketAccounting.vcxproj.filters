@@ -100,6 +100,9 @@
     <ClCompile Include="dashboardpage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="settingspage.cpp">
+      <Filter>Widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="supplier.h">
@@ -165,6 +168,9 @@
       <Filter>Widgets</Filter>
     </QtMoc>
     <QtMoc Include="logindialog.h">
+      <Filter>Widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="settingspage.h">
       <Filter>Widgets</Filter>
     </QtMoc>
   </ItemGroup>

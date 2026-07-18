@@ -72,6 +72,11 @@ private slots:
     void onManageColumnsClicked();
     void onCustomerChanged(int index);
 
+    // NEW: Save, Print, and Settings reload
+    void onSaveClicked();
+    void onPrintReceiptClicked();
+    void loadSettings();
+
 private:
     void setupUI();
     void loadCategories();
@@ -145,6 +150,13 @@ private:
     StyledLineEdit* m_taxEdit = nullptr;
     StyledLineEdit* m_netEdit = nullptr;
     StyledLineEdit* m_notesEdit = nullptr;
+
+    // NEW: Receipt printing & live exchange rate
+    double m_usdToLbpRate = 89500.0;
+    QString m_companyName;
+    QString m_receiptHeader;
+    QString m_receiptFooter;
+    QPushButton* m_printReceiptBtn = nullptr;
 };
 
 #endif

@@ -26,6 +26,13 @@
 #include <QDateEdit>
 #include <QListWidget>
 
+// NEW: Receipt printing
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QPainter>
+#include <QPageSize>
+#include <QPageLayout>
+
 SalesPage::SalesPage(QWidget* parent) : QWidget(parent), m_currentSlot(0)
 {
     for (int i = 0; i < 3; ++i) {
@@ -38,6 +45,7 @@ SalesPage::SalesPage(QWidget* parent) : QWidget(parent), m_currentSlot(0)
     loadCategories();
     loadAccounts();
     loadCustomers();
+    loadSettings();          // NEW
     refreshSaleTable();
     refreshTotals();
     updateSlotButtons();
@@ -378,6 +386,14 @@ void SalesPage::setupUI()
     totalLayout->addWidget(m_totalUSDLabel);
     rightLayout->addLayout(totalLayout);
 
+    // NEW: Print Receipt button
+    QHBoxLayout* printLayout = new QHBoxLayout();
+    printLayout->addStretch();
+    m_printReceiptBtn = new QPushButton(tr("Print Receipt"));
+    m_printReceiptBtn->setStyleSheet(btnStyle);
+    printLayout->addWidget(m_printReceiptBtn);
+    rightLayout->addLayout(printLayout);
+
     QHBoxLayout* histLayout = new QHBoxLayout();
     histLayout->setSpacing(12);
 
@@ -427,6 +443,10 @@ void SalesPage::setupUI()
     connect(m_discountEdit, &QLineEdit::textChanged, this, &SalesPage::calculateNet);
     connect(m_taxEdit, &QLineEdit::textChanged, this, &SalesPage::calculateNet);
     connect(manageColsBtn, &QPushButton::clicked, this, &SalesPage::onManageColumnsClicked);
+
+    // NEW: Save and Print connections
+    connect(saveBtn, &QPushButton::clicked, this, &SalesPage::onSaveClicked);
+    connect(m_printReceiptBtn, &QPushButton::clicked, this, &SalesPage::onPrintReceiptClicked);
 
     connect(m_searchEdit, &QLineEdit::returnPressed, [=]() {
         QString text = m_searchEdit->text().trimmed();
@@ -936,8 +956,8 @@ void SalesPage::refreshTotals()
     }
 
     session.totalUSD = total;
-    const double USD_TO_LBP = 89500.0;
-    session.totalLBP = total * USD_TO_LBP;
+    // NEW: use live rate from database instead of hardcoded constant
+    session.totalLBP = total * m_usdToLbpRate;
 
     m_totalUSDLabel->setText(tr("Total USD: $%1").arg(QString::number(total, 'f', 2)));
     m_totalLBPLabel->setText(tr("Total LBP: %L1").arg(session.totalLBP, 0, 'f', 0));
@@ -1268,4 +1288,263 @@ void SalesPage::scanProductCode(const QString& code)
     refreshSaleTable();
     refreshTotals();
     calculateNet();
+}
+
+// ------------------------------------------------------------------
+// NEW: Settings & Exchange Rate
+// ------------------------------------------------------------------
+void SalesPage::loadSettings()
+{
+    QSqlQuery query("SELECT setting_key, setting_value FROM settings");
+    while (query.next()) {
+        QString key = query.value("setting_key").toString();
+        QString val = query.value("setting_value").toString();
+        if (key == "usd_to_lbp_rate") m_usdToLbpRate = val.toDouble();
+        else if (key == "company_name") m_companyName = val;
+        else if (key == "receipt_header") m_receiptHeader = val;
+        else if (key == "receipt_footer") m_receiptFooter = val;
+    }
+    if (m_usdToLbpRate <= 0) m_usdToLbpRate = 89500.0;
+}
+
+// ------------------------------------------------------------------
+// NEW: Save Sale to Database
+// ------------------------------------------------------------------
+void SalesPage::onSaveClicked()
+{
+    SaleSession& session = m_sessions[m_currentSlot];
+    if (session.items.isEmpty()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No items in the cart to save."));
+        return;
+    }
+    if (m_accountCombo->currentIndex() <= 0) {
+        QMessageBox::warning(this, tr("Warning"), tr("Please select an account."));
+        return;
+    }
+
+    double total = 0.0;
+    for (const auto& item : session.items) total += item.lineTotal;
+    double discount = m_discountEdit ? m_discountEdit->text().toDouble() : 0.0;
+    double tax = m_taxEdit ? m_taxEdit->text().toDouble() : 0.0;
+    double net = total - discount + tax;
+
+    QString ref = m_refEdit->text().trimmed();
+    if (ref.isEmpty()) ref = QString("SAL-%1").arg(session.code);
+
+    DbManager* db = DbManager::instance();
+    if (!db->transaction()) {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to start transaction."));
+        return;
+    }
+
+    QSqlQuery transQuery;
+    transQuery.prepare(
+        "INSERT INTO transactions (type, reference_number, party_id, total_amount, "
+        "discount, tax_amount, net_amount, payment_method, notes, created_at) "
+        "VALUES ('sale', :ref, :party, :total, :discount, :tax, :net, "
+        ":payment, :notes, :created)"
+    );
+    transQuery.bindValue(":ref", ref);
+    transQuery.bindValue(":party", session.customerId);
+    transQuery.bindValue(":total", total);
+    transQuery.bindValue(":discount", discount);
+    transQuery.bindValue(":tax", tax);
+    transQuery.bindValue(":net", net);
+    transQuery.bindValue(":payment", session.paymentType);
+    transQuery.bindValue(":notes", m_notesEdit ? m_notesEdit->text().trimmed() : QString());
+    transQuery.bindValue(":created", QDateTime::currentDateTime());
+
+    if (!transQuery.exec()) {
+        db->rollback();
+        QMessageBox::critical(this, tr("Error"), transQuery.lastError().text());
+        return;
+    }
+
+    int transactionId = transQuery.lastInsertId().toInt();
+
+    for (const auto& item : session.items) {
+        QSqlQuery itemQuery;
+        itemQuery.prepare(
+            "INSERT INTO transaction_items (transaction_id, product_id, quantity, unit_price, total_price) "
+            "VALUES (:tid, :pid, :qty, :price, :total)"
+        );
+        itemQuery.bindValue(":tid", transactionId);
+        itemQuery.bindValue(":pid", item.productId);
+        itemQuery.bindValue(":qty", item.quantity);
+        itemQuery.bindValue(":price", item.price);
+        itemQuery.bindValue(":total", item.lineTotal);
+        if (!itemQuery.exec()) {
+            db->rollback();
+            QMessageBox::critical(this, tr("Error"), itemQuery.lastError().text());
+            return;
+        }
+
+        // Deduct stock
+        QSqlQuery stockQuery;
+        stockQuery.prepare("UPDATE products SET quantity = quantity - :qty WHERE id = :pid");
+        stockQuery.bindValue(":qty", item.quantity);
+        stockQuery.bindValue(":pid", item.productId);
+        if (!stockQuery.exec()) {
+            db->rollback();
+            QMessageBox::critical(this, tr("Error"), stockQuery.lastError().text());
+            return;
+        }
+    }
+
+    // If debt sale, update customer balance
+    if (session.paymentType == "debt" && session.customerId > 0) {
+        QSqlQuery custQuery;
+        custQuery.prepare("UPDATE customers SET balance = balance + :amount WHERE id = :id");
+        custQuery.bindValue(":amount", net);
+        custQuery.bindValue(":id", session.customerId);
+        custQuery.exec(); // best effort
+    }
+
+    db->commit();
+    QMessageBox::information(this, tr("Success"), tr("Sale saved successfully!"));
+
+    // Reset current session
+    session.items.clear();
+    session.totalLBP = 0;
+    session.totalUSD = 0;
+    refreshSaleTable();
+    refreshTotals();
+    calculateNet();
+}
+
+// ------------------------------------------------------------------
+// NEW: Print Receipt (80mm thermal paper)
+// ------------------------------------------------------------------
+void SalesPage::onPrintReceiptClicked()
+{
+    SaleSession& session = m_sessions[m_currentSlot];
+    if (session.items.isEmpty()) {
+        QMessageBox::warning(this, tr("Warning"), tr("Cart is empty. Nothing to print."));
+        return;
+    }
+
+    QPrinter printer(QPrinter::HighResolution);
+    // 80 mm x 297 mm thermal roll (common receipt size)
+    printer.setPageSize(QPageSize(QSizeF(80, 297), QPageSize::Millimeter));
+    printer.setPageOrientation(QPageLayout::Portrait);
+
+    QPrintDialog dialog(&printer, this);
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    QPainter p(&printer);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setLayoutDirection(Qt::RightToLeft);
+
+    QFont font("Segoe UI", 10);
+    p.setFont(font);
+
+    int margin = 30;
+    // FIX: pageRect() returns QRectF in Qt 6; convert to QRect
+    QRect paintRect = printer.pageRect(QPrinter::DevicePixel).toRect();
+    int pageW = paintRect.width();
+    int contentW = pageW - margin * 2;
+    int y = 40;
+
+    // ... rest of the function stays exactly the same as before ...
+
+    // Header
+    QFont headerFont("Segoe UI", 14, QFont::Bold);
+    p.setFont(headerFont);
+    QString headerText = m_receiptHeader.isEmpty() ? m_companyName : m_receiptHeader;
+    if (headerText.isEmpty()) headerText = tr("MarketPro");
+    p.drawText(margin, y, contentW, 40, Qt::AlignCenter, headerText);
+    y += 50;
+
+    p.setFont(font);
+    p.drawText(margin, y, contentW, 20, Qt::AlignCenter, "------------------------------");
+    y += 30;
+
+    // Info block
+    QString info = tr("Sale #: %1\nDate: %2\nCustomer: %3\nPayment: %4")
+        .arg(QString::number(session.code))
+        .arg(QDate::currentDate().toString("yyyy-MM-dd"))
+        .arg(session.customerName.isEmpty() ? tr("Walk-in") : session.customerName)
+        .arg(session.paymentType == "cash" ? tr("Cash") : tr("Debt"));
+    p.drawText(margin, y, contentW, 80, Qt::AlignRight | Qt::TextWordWrap, info);
+    y += 90;
+
+    p.drawText(margin, y, contentW, 20, Qt::AlignCenter, "------------------------------");
+    y += 30;
+
+    // Items header
+    QFont boldFont = font;
+    boldFont.setBold(true);
+    p.setFont(boldFont);
+
+    // RTL columns drawn right-to-left
+    int colWidths[4] = { 70, 60, 50, contentW - 180 }; // Total, Price, Qty, Product
+    QStringList headers = { tr("Total"), tr("Price"), tr("Qty"), tr("Product") };
+    int x = pageW - margin;
+    for (int i = 0; i < 4; ++i) {
+        x -= colWidths[i];
+        p.drawText(x, y, colWidths[i], 25, Qt::AlignCenter, headers[i]);
+    }
+    y += 30;
+    p.setFont(font);
+
+    // Items
+    double subtotal = 0.0;
+    for (const auto& item : session.items) {
+        x = pageW - margin;
+        QStringList vals = {
+            QString::number(item.lineTotal, 'f', 2),
+            QString::number(item.price, 'f', 2),
+            QString::number(item.quantity),
+            item.name
+        };
+        for (int i = 0; i < 4; ++i) {
+            x -= colWidths[i];
+            Qt::Alignment align = (i == 3) ? Qt::AlignRight : Qt::AlignCenter;
+            p.drawText(x, y, colWidths[i], 25, align, vals[i]);
+        }
+        y += 25;
+        subtotal += item.lineTotal;
+    }
+
+    y += 10;
+    p.drawText(margin, y, contentW, 20, Qt::AlignCenter, "------------------------------");
+    y += 30;
+
+    // Totals
+    double discount = m_discountEdit ? m_discountEdit->text().toDouble() : 0.0;
+    double tax = m_taxEdit ? m_taxEdit->text().toDouble() : 0.0;
+    double net = subtotal - discount + tax;
+
+    auto drawRow = [&](const QString& label, const QString& value, bool bold = false) {
+        QFont f = font;
+        if (bold) f.setBold(true);
+        p.setFont(f);
+        p.drawText(margin, y, contentW / 2, 25, Qt::AlignLeft, label);
+        p.drawText(margin + contentW / 2, y, contentW / 2, 25, Qt::AlignRight, value);
+        y += 25;
+        };
+
+    drawRow(tr("Subtotal:"), QString::number(subtotal, 'f', 2));
+    drawRow(tr("Discount:"), QString::number(discount, 'f', 2));
+    drawRow(tr("Tax:"), QString::number(tax, 'f', 2));
+    y += 5;
+    drawRow(tr("NET TOTAL:"), "$" + QString::number(net, 'f', 2), true);
+
+    double lbpTotal = net * m_usdToLbpRate;
+    QFont lbpFont = font;
+    lbpFont.setPointSize(9);
+    p.setFont(lbpFont);
+    p.drawText(margin, y, contentW, 25, Qt::AlignRight,
+        tr("LBP: %L1").arg(lbpTotal, 0, 'f', 0));
+    y += 35;
+
+    p.setFont(font);
+    p.drawText(margin, y, contentW, 20, Qt::AlignCenter, "------------------------------");
+    y += 30;
+
+    // Footer
+    QString footerText = m_receiptFooter.isEmpty() ? tr("Thank you!") : m_receiptFooter;
+    p.drawText(margin, y, contentW, 60, Qt::AlignCenter | Qt::TextWordWrap, footerText);
+
+    p.end();
 }

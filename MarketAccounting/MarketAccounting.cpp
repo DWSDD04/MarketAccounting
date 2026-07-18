@@ -11,6 +11,7 @@
 #include "returnspage.h"
 #include "expensespage.h"
 #include "debtspage.h"
+#include "settingspage.h"
 
 #include <QPushButton>
 #include <QLabel>
@@ -84,6 +85,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     QPushButton* debtBtn = createNavBtn(tr("Debts"));
     QPushButton* expenseBtn = createNavBtn(tr("Expenses"));
     QPushButton* reportBtn = createNavBtn(tr("Reports"));
+    QPushButton* settingsBtn = createNavBtn(tr("Settings"));
 
     dashBtn->setChecked(true);
 
@@ -97,6 +99,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     sidebarLayout->addWidget(debtBtn);
     sidebarLayout->addWidget(expenseBtn);
     sidebarLayout->addWidget(reportBtn);
+    sidebarLayout->addWidget(settingsBtn);
     sidebarLayout->addStretch();
 
     // Logout button at bottom
@@ -127,6 +130,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     DebtsPage* debtPage = new DebtsPage();
     ExpensesPage* expensePage = new ExpensesPage();
     ReportsPage* reportPage = new ReportsPage();
+    SettingsPage* settingsPage = new SettingsPage();
 
     stack->addWidget(dashPage);      // 0
     stack->addWidget(salesPage);     // 1
@@ -138,6 +142,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     stack->addWidget(debtPage);      // 7
     stack->addWidget(expensePage);   // 8
     stack->addWidget(reportPage);    // 9
+    stack->addWidget(settingsPage);  // 10
 
     mainLayout->addWidget(stack, 1);
     setCentralWidget(central);
@@ -146,7 +151,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     auto switchPage = [=](int index, QPushButton* activeBtn) {
         stack->setCurrentIndex(index);
         for (QPushButton* btn : { dashBtn, salesBtn, purchaseBtn, returnBtn, prodBtn,
-                                   suppBtn, custBtn, debtBtn, expenseBtn, reportBtn }) {
+                                   suppBtn, custBtn, debtBtn, expenseBtn, reportBtn, settingsBtn }) {
             btn->setChecked(btn == activeBtn);
         }
         };
@@ -161,6 +166,7 @@ MarketAccounting::MarketAccounting(const User& user, QWidget* parent)
     connect(debtBtn, &QPushButton::clicked, [=]() { switchPage(7, debtBtn); });
     connect(expenseBtn, &QPushButton::clicked, [=]() { switchPage(8, expenseBtn); });
     connect(reportBtn, &QPushButton::clicked, [=]() { switchPage(9, reportBtn); });
+    connect(settingsBtn, &QPushButton::clicked, [=]() { switchPage(10, settingsBtn); });
 
     connect(m_logoutBtn, &QPushButton::clicked, this, &MarketAccounting::onLogoutClicked);
 

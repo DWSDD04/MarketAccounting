@@ -114,6 +114,7 @@
     <ClCompile Include="reportspage.cpp" />
     <ClCompile Include="returnspage.cpp" />
     <ClCompile Include="salespage.cpp" />
+    <ClCompile Include="settingspage.cpp" />
     <ClCompile Include="styledcombobox.cpp" />
     <ClCompile Include="styledlineedit.cpp" />
     <ClCompile Include="supplierspage.cpp" />
@@ -129,6 +130,7 @@
     <QtMoc Include="logindialog.h" />
     <QtMoc Include="purchasepage.h" />
     <QtMoc Include="returnspage.h" />
+    <QtMoc Include="settingspage.h" />
     <ClInclude Include="user.h" />
     <QtMoc Include="cardwidget.h" />
     <QtMoc Include="dashboardpage.h" />
